@@ -1,0 +1,185 @@
+/* Buttons - Large Mobile-Friendly Ferrari Style */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    font-family: var(--font-family);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    padding: var(--spacing-4) var(--spacing-6);
+    min-height: 56px;
+    border-radius: var(--radius-xl);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    text-decoration: none;
+    white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Primary Button - Light Blue */
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    color: var(--color-white);
+    box-shadow: var(--shadow-glow);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(0, 180, 216, 0.5);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Secondary Button - Dark with border */
+.btn-secondary {
+    background-color: var(--color-gray-800);
+    color: var(--color-white);
+    border: 2px solid var(--color-gray-600);
+}
+
+.btn-secondary:hover {
+    background-color: var(--color-gray-700);
+    border-color: var(--color-primary);
+}
+
+/* Accent Button - Gold */
+.btn-accent {
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+    color: var(--color-black);
+    box-shadow: var(--shadow-gold);
+}
+
+.btn-accent:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+}
+
+/* Danger Button */
+.btn-danger {
+    background: linear-gradient(135deg, var(--color-danger) 0%, #DC2626 100%);
+    color: var(--color-white);
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+/* Ghost Button */
+.btn-ghost {
+    background-color: transparent;
+    color: var(--color-gray-300);
+    padding: var(--spacing-3);
+    min-height: auto;
+}
+
+.btn-ghost:hover {
+    background-color: var(--color-gray-800);
+    color: var(--color-white);
+}
+
+/* Size Variants */
+.btn-sm {
+    font-size: var(--font-size-base);
+    padding: var(--spacing-3) var(--spacing-4);
+    min-height: 44px;
+}
+
+.btn-lg {
+    font-size: var(--font-size-xl);
+    padding: var(--spacing-5) var(--spacing-8);
+    min-height: 64px;
+}
+
+.btn-xl {
+    font-size: var(--font-size-2xl);
+    padding: var(--spacing-6) var(--spacing-10);
+    min-height: 72px;
+    border-radius: var(--radius-2xl);
+}
+
+/* Full Width */
+.btn-block {
+    width: 100%;
+}
+
+/* Icon Button */
+.btn-icon {
+    padding: var(--spacing-3);
+    min-height: 48px;
+    min-width: 48px;
+    border-radius: var(--radius-lg);
+}
+
+/* Add Class Button - Special Style */
+.btn-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-3);
+    background-color: var(--color-gray-800);
+    border: 3px dashed var(--color-gray-600);
+    color: var(--color-gray-400);
+    padding: var(--spacing-8);
+    min-height: 180px;
+    border-radius: var(--radius-2xl);
+    transition: all var(--transition-normal);
+    width: 100%;
+    font-size: var(--font-size-lg);
+}
+
+.btn-add:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background-color: rgba(0, 180, 216, 0.1);
+}
+
+.btn-add .plus-icon {
+    font-size: 3rem;
+    font-weight: 300;
+    line-height: 1;
+}
+
+/* Disabled State */
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Button Group */
+.btn-group {
+    display: flex;
+    gap: var(--spacing-3);
+}
+
+.btn-group-vertical {
+    flex-direction: column;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .btn {
+        min-height: 52px;
+        padding: var(--spacing-4) var(--spacing-5);
+    }
+    
+    .btn-lg {
+        min-height: 60px;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+    }
+}
