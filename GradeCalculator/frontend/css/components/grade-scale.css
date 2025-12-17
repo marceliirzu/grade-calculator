@@ -1,0 +1,116 @@
+/* Grade Scale Editor - Dark Ferrari Theme */
+
+.grade-scale-editor {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-gray-700);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+}
+
+.grade-scale-header {
+    padding: var(--spacing-4) var(--spacing-5);
+    background-color: var(--color-gray-800);
+    border-bottom: 1px solid var(--color-gray-700);
+}
+
+.grade-scale-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-white);
+}
+
+.grade-scale-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.grade-scale-table th {
+    padding: var(--spacing-3) var(--spacing-4);
+    text-align: left;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: var(--color-gray-800);
+    border-bottom: 1px solid var(--color-gray-700);
+}
+
+.grade-scale-table td {
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--color-gray-700);
+    color: var(--color-gray-200);
+}
+
+.grade-scale-table tr:last-child td {
+    border-bottom: none;
+}
+
+.grade-scale-table tr:hover {
+    background-color: var(--color-gray-800);
+}
+
+.grade-letter {
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+}
+
+.grade-input {
+    width: 80px;
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-base);
+    color: var(--color-white);
+    background-color: var(--color-gray-700);
+    border: 1px solid var(--color-gray-600);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.grade-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.gpa-points {
+    color: var(--color-gray-400);
+    font-weight: 500;
+}
+
+/* Compact Display Mode */
+.grade-scale-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3);
+}
+
+.grade-scale-compact .grade-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-3);
+    background-color: var(--color-gray-800);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+}
+
+.grade-scale-compact .grade-letter {
+    font-size: var(--font-size-sm);
+}
+
+.grade-scale-compact .grade-threshold {
+    color: var(--color-gray-400);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .grade-scale-table th,
+    .grade-scale-table td {
+        padding: var(--spacing-2) var(--spacing-3);
+    }
+    
+    .grade-input {
+        width: 60px;
+        padding: var(--spacing-2);
+    }
+}

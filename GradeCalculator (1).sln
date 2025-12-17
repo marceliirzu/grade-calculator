@@ -1,0 +1,32 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GradeCalculator", "GradeCalculator", "{CD3F283C-EC4D-87C6-1223-27FDE4622E25}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{5B2AA244-52D0-F875-B116-115DE779E46C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GradeCalculator.API", "GradeCalculator\backend\GradeCalculator.API\GradeCalculator.API.csproj", "{6622C14E-E35F-13FD-BA69-487348C006DE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6622C14E-E35F-13FD-BA69-487348C006DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6622C14E-E35F-13FD-BA69-487348C006DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6622C14E-E35F-13FD-BA69-487348C006DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6622C14E-E35F-13FD-BA69-487348C006DE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5B2AA244-52D0-F875-B116-115DE779E46C} = {CD3F283C-EC4D-87C6-1223-27FDE4622E25}
+		{6622C14E-E35F-13FD-BA69-487348C006DE} = {5B2AA244-52D0-F875-B116-115DE779E46C}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DFA96D54-883D-4CB2-BF22-62968C40EE0A}
+	EndGlobalSection
+EndGlobal

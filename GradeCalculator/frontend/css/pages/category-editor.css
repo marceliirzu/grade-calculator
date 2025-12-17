@@ -1,0 +1,257 @@
+/* Category Editor Page - Dark Ferrari Theme */
+
+.category-editor-page {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-5);
+    font-size: var(--font-size-base);
+}
+
+.breadcrumb a {
+    color: var(--color-primary);
+}
+
+.breadcrumb-separator {
+    color: var(--color-gray-600);
+}
+
+.breadcrumb-current {
+    color: var(--color-gray-400);
+}
+
+/* Category Header */
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: linear-gradient(145deg, var(--color-gray-900) 0%, var(--color-bg-card) 100%);
+    padding: var(--spacing-6);
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--color-gray-700);
+    margin-bottom: var(--spacing-6);
+}
+
+.category-info h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--color-white);
+    margin-bottom: var(--spacing-2);
+}
+
+.category-meta {
+    display: flex;
+    gap: var(--spacing-3);
+    color: var(--color-gray-400);
+    font-size: var(--font-size-base);
+}
+
+.category-grade-display .category-percentage {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+/* Grade Items Section */
+.grade-items-section {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-gray-700);
+    border-radius: var(--radius-2xl);
+    padding: var(--spacing-6);
+    margin-bottom: var(--spacing-6);
+}
+
+.grade-items-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-5);
+}
+
+.grade-items-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-white);
+}
+
+/* Grade Item Row */
+.grade-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 80px auto;
+    gap: var(--spacing-4);
+    align-items: center;
+    padding: var(--spacing-4);
+    background-color: var(--color-gray-800);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-3);
+    transition: background-color var(--transition-fast);
+}
+
+.grade-item:hover {
+    background-color: var(--color-gray-700);
+}
+
+.grade-item.what-if {
+    background-color: rgba(245, 158, 11, 0.15);
+    border: 1px solid var(--color-warning);
+}
+
+.grade-item-name {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.grade-item-name .name-input {
+    background: transparent;
+    border: none;
+    color: var(--color-white);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    padding: var(--spacing-2);
+    width: 100%;
+}
+
+.grade-item-name .name-input:focus {
+    background-color: var(--color-gray-700);
+    border-radius: var(--radius-md);
+    outline: none;
+}
+
+.what-if-badge {
+    background: linear-gradient(135deg, var(--color-warning) 0%, #D97706 100%);
+    color: var(--color-black);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    padding: var(--spacing-1) var(--spacing-2);
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+}
+
+.grade-item-score {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.grade-item-score .earned-input,
+.grade-item-score .possible-input {
+    width: 70px;
+    padding: var(--spacing-2) var(--spacing-3);
+    background-color: var(--color-gray-700);
+    border: 1px solid var(--color-gray-600);
+    border-radius: var(--radius-md);
+    color: var(--color-white);
+    font-size: var(--font-size-base);
+    text-align: center;
+}
+
+.grade-item-score .earned-input:focus,
+.grade-item-score .possible-input:focus {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+.grade-item-score .divider {
+    color: var(--color-gray-500);
+    font-size: var(--font-size-lg);
+}
+
+.grade-item-percentage {
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    color: var(--color-primary);
+    text-align: center;
+}
+
+.grade-item-actions {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+.grade-item-actions .btn-icon {
+    font-size: var(--font-size-lg);
+    min-width: 44px;
+    min-height: 44px;
+}
+
+/* Empty Grades */
+.empty-grades {
+    text-align: center;
+    padding: var(--spacing-8);
+    color: var(--color-gray-400);
+    font-size: var(--font-size-lg);
+}
+
+/* Rules Section */
+.rules-section {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-gray-700);
+    border-radius: var(--radius-2xl);
+    padding: var(--spacing-6);
+}
+
+.rules-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-4);
+}
+
+.rules-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-white);
+}
+
+.rule-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-4);
+    background-color: var(--color-gray-800);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-3);
+}
+
+.rule-description {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    color: var(--color-gray-200);
+}
+
+.rule-icon {
+    font-size: var(--font-size-xl);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .grade-item {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-3);
+    }
+    
+    .grade-item-score {
+        justify-content: center;
+    }
+    
+    .grade-item-percentage {
+        text-align: left;
+    }
+    
+    .grade-item-actions {
+        justify-content: center;
+    }
+    
+    .category-header {
+        flex-direction: column;
+        gap: var(--spacing-4);
+    }
+}
