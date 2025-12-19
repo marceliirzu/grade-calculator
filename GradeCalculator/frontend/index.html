@@ -7,6 +7,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>CalcYourGPA - Grade Calculator</title>
     
+    <!-- Google Sign-In -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
     <!-- CSS -->
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/main.css">
@@ -37,15 +40,23 @@
             text-decoration: none;
         }
         
-        .header-logo-text {
+        .header-logo-animation {
             font-family: 'Orbitron', monospace;
             font-size: 1.4rem;
             font-weight: 700;
-            color: var(--color-accent);
             letter-spacing: 1px;
+            display: flex;
         }
         
-        .header-logo-text .dot {
+        .header-logo-animation .digit {
+            display: inline-block;
+            min-width: 0.9ch;
+            text-align: center;
+            color: var(--color-accent);
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+        
+        .header-logo-animation .dot {
             color: var(--color-primary);
         }
         
@@ -58,7 +69,7 @@
         /* Hero G.PA Animation */
         .hero-logo-animation {
             font-family: 'Orbitron', monospace;
-            font-size: 5rem;
+            font-size: 6rem;
             font-weight: 700;
             letter-spacing: 4px;
             display: flex;
@@ -71,17 +82,17 @@
             min-width: 1.2ch;
             text-align: center;
             color: var(--color-accent);
-            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
         }
         
         .hero-logo-animation .dot {
             color: var(--color-primary);
-            text-shadow: 0 0 20px rgba(0, 180, 216, 0.5);
+            text-shadow: 0 0 30px rgba(0, 180, 216, 0.6);
         }
         
         @media (max-width: 640px) {
             .hero-logo-animation {
-                font-size: 3.5rem;
+                font-size: 4rem;
             }
             .header-tagline {
                 display: none;
@@ -120,6 +131,34 @@
             border-radius: var(--radius-full);
             font-weight: 700;
         }
+        
+        /* Google Sign-in Button */
+        .google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: white;
+            color: #333;
+            border: none;
+            padding: 14px 28px;
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .google-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .google-btn svg {
+            width: 20px;
+            height: 20px;
+        }
     </style>
 </head>
 <body>
@@ -127,8 +166,13 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <a href="#" class="header-logo" onclick="App.navigate('landing'); return false;">
-                    <span class="header-logo-text">G<span class="dot">.</span>PA</span>
+                <a href="#" class="header-logo" id="headerLogo" onclick="App.navigate('landing'); return false;">
+                    <div class="header-logo-animation" id="headerLogoAnim">
+                        <span class="digit" id="headerDigit1">G</span>
+                        <span class="dot">.</span>
+                        <span class="digit" id="headerDigit2">P</span>
+                        <span class="digit" id="headerDigit3">A</span>
+                    </div>
                     <span class="header-tagline">Track Your Progress</span>
                 </a>
                 <div class="user-menu" id="userMenu">
@@ -169,6 +213,40 @@
     <script src="js/app.js"></script>
     <script>
         document.body.classList.add('loaded');
+        
+        // Header logo animation
+        function animateHeaderLogo() {
+            const digit1 = document.getElementById('headerDigit1');
+            const digit2 = document.getElementById('headerDigit2');
+            const digit3 = document.getElementById('headerDigit3');
+            
+            if (!digit1 || !digit2 || !digit3) return;
+            
+            const chars = '0123456789';
+            let frame = 0;
+            const totalFrames = 20;
+            
+            const interval = setInterval(() => {
+                frame++;
+                
+                if (frame < totalFrames) {
+                    digit1.textContent = chars[Math.floor(Math.random() * 10)];
+                    digit2.textContent = chars[Math.floor(Math.random() * 10)];
+                    digit3.textContent = chars[Math.floor(Math.random() * 10)];
+                } else {
+                    clearInterval(interval);
+                    digit1.textContent = 'G';
+                    digit2.textContent = 'P';
+                    digit3.textContent = 'A';
+                }
+            }, 50);
+        }
+        
+        // Run animation on load
+        setTimeout(animateHeaderLogo, 300);
+        
+        // Re-run on logo click
+        document.getElementById('headerLogo')?.addEventListener('click', animateHeaderLogo);
     </script>
 </body>
 </html>
