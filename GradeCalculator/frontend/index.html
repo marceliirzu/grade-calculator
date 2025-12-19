@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0A0A0A">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Calculate Your GPA</title>
-    
-    <!-- Google Sign-In -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <title>CalcYourGPA - Grade Calculator</title>
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/variables.css">
@@ -31,39 +28,64 @@
         body { opacity: 0; transition: opacity 0.3s; }
         body.loaded { opacity: 1; }
         
-        /* Animated Logo */
-        .logo-container {
+        /* Header Logo */
+        .header-logo {
             display: flex;
             align-items: center;
             gap: var(--spacing-3);
             cursor: pointer;
+            text-decoration: none;
         }
         
-        .logo-animation {
+        .header-logo-text {
             font-family: 'Orbitron', monospace;
-            font-size: 1.8rem;
+            font-size: 1.4rem;
             font-weight: 700;
-            letter-spacing: 2px;
-            display: flex;
+            color: var(--color-accent);
+            letter-spacing: 1px;
         }
         
-        .logo-digit {
+        .header-logo-text .dot {
+            color: var(--color-primary);
+        }
+        
+        .header-tagline {
+            font-size: var(--font-size-sm);
+            color: var(--color-gray-400);
+            font-weight: 400;
+        }
+        
+        /* Hero G.PA Animation */
+        .hero-logo-animation {
+            font-family: 'Orbitron', monospace;
+            font-size: 5rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            display: flex;
+            justify-content: center;
+            margin-bottom: var(--spacing-6);
+        }
+        
+        .hero-logo-animation .digit {
             display: inline-block;
             min-width: 1.2ch;
             text-align: center;
             color: var(--color-accent);
-            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
         }
         
-        .logo-dot {
-            color: var(--color-accent);
+        .hero-logo-animation .dot {
+            color: var(--color-primary);
+            text-shadow: 0 0 20px rgba(0, 180, 216, 0.5);
         }
         
-        .logo-text {
-            font-size: var(--font-size-lg);
-            color: var(--color-gray-300);
-            font-weight: 500;
-            margin-left: var(--spacing-2);
+        @media (max-width: 640px) {
+            .hero-logo-animation {
+                font-size: 3.5rem;
+            }
+            .header-tagline {
+                display: none;
+            }
         }
         
         /* A+ Toggle */
@@ -105,15 +127,10 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <div class="logo-container" id="logoContainer">
-                    <div class="logo-animation" id="logoAnimation">
-                        <span class="logo-digit" id="digit1">0</span>
-                        <span class="logo-dot">.</span>
-                        <span class="logo-digit" id="digit2">0</span>
-                        <span class="logo-digit" id="digit3">0</span>
-                    </div>
-                    <span class="logo-text">Calculate Your GPA</span>
-                </div>
+                <a href="#" class="header-logo" onclick="App.navigate('landing'); return false;">
+                    <span class="header-logo-text">G<span class="dot">.</span>PA</span>
+                    <span class="header-tagline">Track Your Progress</span>
+                </a>
                 <div class="user-menu" id="userMenu">
                     <!-- A+ Toggle loads here -->
                 </div>
@@ -152,38 +169,6 @@
     <script src="js/app.js"></script>
     <script>
         document.body.classList.add('loaded');
-        
-        // Logo Animation
-        function animateLogo() {
-            const digit1 = document.getElementById('digit1');
-            const digit2 = document.getElementById('digit2');
-            const digit3 = document.getElementById('digit3');
-            
-            const chars = '0123456789';
-            let frame = 0;
-            const totalFrames = 20;
-            
-            const interval = setInterval(() => {
-                frame++;
-                
-                if (frame < totalFrames) {
-                    digit1.textContent = chars[Math.floor(Math.random() * 10)];
-                    digit2.textContent = chars[Math.floor(Math.random() * 10)];
-                    digit3.textContent = chars[Math.floor(Math.random() * 10)];
-                } else {
-                    clearInterval(interval);
-                    digit1.textContent = 'G';
-                    digit2.textContent = 'P';
-                    digit3.textContent = 'A';
-                }
-            }, 50);
-        }
-        
-        // Run animation on load
-        setTimeout(animateLogo, 300);
-        
-        // Re-run on logo click
-        document.getElementById('logoContainer')?.addEventListener('click', animateLogo);
     </script>
 </body>
 </html>
