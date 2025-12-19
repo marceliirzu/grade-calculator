@@ -72,10 +72,11 @@ const LandingPage = {
         
         // Animate the hero logo
         this.animateHeroLogo();
-
+        
         // Re-run animation on click
         document.getElementById('heroLogo')?.addEventListener('click', () => {
             this.animateHeroLogo();
+        });
         
         // Google Sign-in
         document.getElementById('googleSignInBtn')?.addEventListener('click', () => {
