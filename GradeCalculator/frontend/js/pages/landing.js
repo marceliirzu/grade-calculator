@@ -19,7 +19,12 @@ const LandingPage = {
         mainContent.innerHTML = `
             <div class="login-prompt">
                 <div class="login-hero">
-                    <div class="hero-icon">📊</div>
+                    <div class="hero-logo-animation" id="heroLogo">
+                        <span class="digit" id="heroDigit1">0</span>
+                        <span class="dot">.</span>
+                        <span class="digit" id="heroDigit2">0</span>
+                        <span class="digit" id="heroDigit3">0</span>
+                    </div>
                     <h1 class="hero-title">Welcome to the Best GPA Calculator</h1>
                     <p class="hero-subtitle">The smart grade calculator that helps with the math so you have more time to stress</p>
                     
@@ -55,6 +60,9 @@ const LandingPage = {
             </div>
         `;
         
+        // Animate the hero logo
+        this.animateHeroLogo();
+        
         document.getElementById('devLoginBtn')?.addEventListener('click', async () => {
             try {
                 await AuthService.devLogin();
@@ -81,6 +89,33 @@ const LandingPage = {
             });
             document.getElementById('closeComingSoon')?.addEventListener('click', () => Modal.hide());
         });
+    },
+    
+    animateHeroLogo() {
+        const digit1 = document.getElementById('heroDigit1');
+        const digit2 = document.getElementById('heroDigit2');
+        const digit3 = document.getElementById('heroDigit3');
+        
+        if (!digit1 || !digit2 || !digit3) return;
+        
+        const chars = '0123456789';
+        let frame = 0;
+        const totalFrames = 20;
+        
+        const interval = setInterval(() => {
+            frame++;
+            
+            if (frame < totalFrames) {
+                digit1.textContent = chars[Math.floor(Math.random() * 10)];
+                digit2.textContent = chars[Math.floor(Math.random() * 10)];
+                digit3.textContent = chars[Math.floor(Math.random() * 10)];
+            } else {
+                clearInterval(interval);
+                digit1.textContent = 'G';
+                digit2.textContent = 'P';
+                digit3.textContent = 'A';
+            }
+        }, 50);
     },
     
     async loadClasses() {
