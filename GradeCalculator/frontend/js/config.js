@@ -1,6 +1,6 @@
 // Configuration
 const CONFIG = {
-    API_URL: 'https://grade-calculator-production-7ca8.up.railway.app/api',
+    API_BASE_URL: 'https://grade-calculator-production-7ca8.up.railway.app/api',
     
     // A+ GPA value (can be 4.0 or 4.33)
     A_PLUS_VALUE: 4.0,
