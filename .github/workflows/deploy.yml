@@ -28,22 +28,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-```
 
-5. Click **Commit changes**
-
----
-
-## Step 3: Wait for Deploy
-
-1. Click **Actions** tab in your repo
-2. You'll see the workflow running
-3. Wait 1-2 minutes for it to finish (green checkmark)
-
----
-
-## Step 4: Check Your Site
-
-Your site will be live at:
-```
-https://marceliirzu.github.io/grade-calculator/
