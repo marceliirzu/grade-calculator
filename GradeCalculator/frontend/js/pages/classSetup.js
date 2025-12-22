@@ -1,297 +1,360 @@
-// Class Setup Page (Wizard) with AI Autofill
+// Class Setup Page
 const ClassSetupPage = {
-    step: 1,
     syllabusData: null,
-    formData: {
-        name: '',
-        creditHours: 3,
-        showOnlyCAndUp: false,
-        categories: [...CONFIG.DEFAULT_CATEGORIES],
-        gradeScale: { ...CONFIG.DEFAULT_GRADE_SCALE }
-    },
+    gradebookData: null,
+    parsedCategories: null,
     
-    init(params = {}) {
-        this.step = 1;
+    async init(params = {}) {
         this.syllabusData = params.syllabusData || null;
-        
-        // Reset form data
-        this.formData = {
-            name: '',
-            creditHours: 3,
-            showOnlyCAndUp: false,
-            categories: [...CONFIG.DEFAULT_CATEGORIES],
-            gradeScale: { ...CONFIG.DEFAULT_GRADE_SCALE }
-        };
-        
-        // Pre-fill from AI-parsed syllabus if available
-        if (this.syllabusData) {
-            console.log('AI Syllabus Data:', this.syllabusData);
-            
-            if (this.syllabusData.className) {
-                this.formData.name = this.syllabusData.className;
-            }
-            if (this.syllabusData.creditHours) {
-                this.formData.creditHours = this.syllabusData.creditHours;
-            }
-            if (this.syllabusData.categories && this.syllabusData.categories.length > 0) {
-                this.formData.categories = this.syllabusData.categories.map(cat => ({
-                    name: cat.name,
-                    weight: cat.weight
-                }));
-            }
-            if (this.syllabusData.gradeScale) {
-                this.formData.gradeScale = { 
-                    ...CONFIG.DEFAULT_GRADE_SCALE, 
-                    ...this.syllabusData.gradeScale 
-                };
-            }
-        }
+        this.gradebookData = params.gradebookData || null;
+        this.parsedCategories = null;
         
         this.render();
         this.bindEvents();
+        
+        // Pre-fill from syllabus data if available
+        if (this.syllabusData) {
+            this.prefillFromSyllabus();
+        }
+        
+        // Pre-fill from gradebook data if available
+        if (this.gradebookData) {
+            this.prefillFromGradebook();
+        }
     },
     
     render() {
         const mainContent = document.getElementById('mainContent');
-        const aiIndicator = this.syllabusData ? `
-            <div style="background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark) 100%); 
-                        color: var(--color-black); 
-                        padding: var(--spacing-3) var(--spacing-5); 
-                        border-radius: var(--radius-full); 
-                        display: inline-flex; 
-                        align-items: center; 
-                        gap: var(--spacing-2);
-                        margin-bottom: var(--spacing-4);
-                        font-weight: 600;">
-                ✨ AI Auto-filled from your syllabus
-            </div>
-        ` : '';
         
         mainContent.innerHTML = `
             <div class="class-setup-page">
                 <div class="setup-header">
-                    ${aiIndicator}
-                    <h1 class="setup-title">Add New Class</h1>
-                    <p class="setup-subtitle">Set up your class in a few simple steps</p>
+                    <button class="btn btn-secondary btn-sm" id="backBtn">← Back</button>
+                    <h1 class="setup-title">New Class</h1>
                 </div>
                 
-                ${this.renderProgress()}
-                
-                <div class="setup-card">
-                    ${this.renderStep()}
-                </div>
-                
-                <a href="#" class="skip-link" id="cancelSetup">Cancel and go back</a>
-            </div>
-        `;
-    },
-    
-    renderProgress() {
-        const steps = ['Basic Info', 'Categories', 'Grade Scale'];
-        
-        return `
-            <div class="setup-progress">
-                ${steps.map((label, i) => `
-                    <div class="progress-step">
-                        <span class="step-number ${i + 1 === this.step ? 'active' : ''} ${i + 1 < this.step ? 'completed' : ''}">${i + 1 < this.step ? '✓' : i + 1}</span>
-                        <span class="step-label ${i + 1 === this.step ? 'active' : ''}">${label}</span>
+                <form class="setup-form" id="classSetupForm">
+                    <div class="form-section">
+                        <h2 class="section-title">Class Information</h2>
+                        
+                        <div class="form-group">
+                            <label for="className">Class Name *</label>
+                            <input type="text" id="className" class="form-input" placeholder="e.g., Calculus I, Biology 101" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="creditHours">Credit Hours</label>
+                            <select id="creditHours" class="form-input">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3" selected>3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
+                        </div>
                     </div>
-                    ${i < steps.length - 1 ? `<div class="progress-line ${i + 1 < this.step ? 'completed' : ''}"></div>` : ''}
-                `).join('')}
+                    
+                    <div class="form-section">
+                        <h2 class="section-title">Categories</h2>
+                        <p class="section-description">Add your grading categories. Weights should total 100%.</p>
+                        
+                        <div class="categories-list" id="categoriesList">
+                            <!-- Categories added dynamically -->
+                        </div>
+                        
+                        <button type="button" class="btn btn-secondary" id="addCategoryBtn">+ Add Category</button>
+                        
+                        <div class="weight-total" id="weightTotal">
+                            Total Weight: <span id="totalWeight">0</span>%
+                        </div>
+                    </div>
+                    
+                    <!-- Gradebook Preview -->
+                    <div class="form-section" id="gradebookPreview" style="display: none;">
+                        <!-- Filled by prefillFromGradebook -->
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-lg">Create Class</button>
+                    </div>
+                </form>
             </div>
         `;
+        
+        // Add initial categories
+        this.addCategory('Assignments', 30);
+        this.addCategory('Quizzes', 20);
+        this.addCategory('Exams', 50);
     },
     
-    renderStep() {
-        switch (this.step) {
-            case 1: return this.renderStep1();
-            case 2: return this.renderStep2();
-            case 3: return this.renderStep3();
-            default: return '';
+    prefillFromSyllabus() {
+        if (!this.syllabusData) return;
+        
+        // Set class name if found
+        if (this.syllabusData.className) {
+            const nameInput = document.getElementById('className');
+            if (nameInput) nameInput.value = this.syllabusData.className;
+        }
+        
+        // Replace default categories with parsed ones
+        if (this.syllabusData.categories && this.syllabusData.categories.length > 0) {
+            const list = document.getElementById('categoriesList');
+            list.innerHTML = '';
+            
+            this.syllabusData.categories.forEach(cat => {
+                this.addCategory(cat.name, cat.weight);
+            });
         }
     },
     
-    renderStep1() {
-        return `
-            <h2 class="setup-card-title">Basic Information</h2>
-            <div class="basic-info-grid">
-                <div class="form-group">
-                    <label class="form-label">Class Name</label>
-                    <input type="text" class="form-input" id="className" 
-                           value="${this.formData.name}" placeholder="e.g., Calculus I">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Credit Hours</label>
-                    <input type="number" class="form-input" id="creditHours" 
-                           value="${this.formData.creditHours}" min="0.5" max="10" step="0.5">
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="form-check">
-                    <input type="checkbox" class="form-check-input" id="showOnlyCAndUp" 
-                           ${this.formData.showOnlyCAndUp ? 'checked' : ''}>
-                    <span class="form-check-label">D grade counts as failing (C and up only)</span>
-                </label>
-            </div>
-            <div class="setup-nav">
-                <div></div>
-                <button class="btn btn-primary btn-lg" id="nextBtn">Next →</button>
-            </div>
-        `;
-    },
-    
-    renderStep2() {
-        const totalWeight = this.formData.categories.reduce((sum, c) => sum + parseFloat(c.weight || 0), 0);
-        const isValid = Math.abs(totalWeight - 100) < 0.01;
+    prefillFromGradebook() {
+        if (!this.gradebookData) return;
         
-        return `
-            <h2 class="setup-card-title">Grade Categories</h2>
-            <p style="color: var(--color-gray-400); margin-bottom: var(--spacing-5);">
-                Define how your grade is calculated. Weights must add up to 100%.
-            </p>
-            <div class="categories-list" id="categoriesList">
-                ${this.formData.categories.map((cat, i) => `
-                    <div class="category-row">
-                        <input type="text" class="form-input category-name" 
-                               value="${cat.name}" data-index="${i}" placeholder="Category name">
-                        <div class="input-group">
-                            <input type="number" class="form-input category-weight" 
-                                   value="${cat.weight}" data-index="${i}" min="0" max="100">
-                            <span class="input-group-append">%</span>
-                        </div>
-                        <span class="delete-btn" data-index="${i}">🗑️</span>
-                    </div>
-                `).join('')}
-            </div>
-            <button class="btn btn-secondary mt-4" id="addCategoryBtn">+ Add Category</button>
-            <div class="total-weight ${isValid ? 'success' : 'error'}">
-                <span>Total Weight</span>
-                <span>${totalWeight.toFixed(1)}%</span>
-            </div>
-            <div class="setup-nav">
-                <button class="btn btn-secondary btn-lg" id="prevBtn">← Back</button>
-                <button class="btn btn-primary btn-lg" id="nextBtn" ${!isValid ? 'disabled' : ''}>Next →</button>
-            </div>
-        `;
+        // Set class name if found
+        if (this.gradebookData.className) {
+            const nameInput = document.getElementById('className');
+            if (nameInput && !nameInput.value) {
+                nameInput.value = this.gradebookData.className;
+            }
+        }
+        
+        // Pre-fill categories with items
+        if (this.gradebookData.categories && this.gradebookData.categories.length > 0) {
+            // Store for later use when creating class
+            this.parsedCategories = this.gradebookData.categories;
+            
+            // Replace categories in form
+            const list = document.getElementById('categoriesList');
+            list.innerHTML = '';
+            
+            this.gradebookData.categories.forEach(cat => {
+                this.addCategory(cat.name, cat.weight || 0);
+            });
+            
+            // Show preview
+            this.showGradebookPreview();
+        }
     },
     
-    renderStep3() {
-        return `
-            <h2 class="setup-card-title">Grade Scale</h2>
-            <p style="color: var(--color-gray-400); margin-bottom: var(--spacing-5);">
-                Set the minimum percentage for each letter grade.
-            </p>
-            ${GradeScaleEditor.render(this.formData.gradeScale)}
-            <div class="setup-nav">
-                <button class="btn btn-secondary btn-lg" id="prevBtn">← Back</button>
-                <button class="btn btn-accent btn-lg" id="saveBtn">✨ Create Class</button>
+    showGradebookPreview() {
+        const previewContainer = document.getElementById('gradebookPreview');
+        if (!previewContainer || !this.parsedCategories) return;
+        
+        let totalItems = 0;
+        let gradedItems = 0;
+        
+        let html = '<h2 class="section-title">📊 Imported Grades Preview</h2>';
+        html += '<div class="gradebook-preview">';
+        
+        this.parsedCategories.forEach((cat, catIndex) => {
+            const itemCount = cat.items?.length || 0;
+            totalItems += itemCount;
+            
+            html += `
+                <div class="preview-category">
+                    <div class="preview-category-header">
+                        <strong>${cat.name}</strong> 
+                        <span style="color: var(--color-gray-500);">(${cat.weight || 0}% • ${itemCount} items)</span>
+                    </div>
+                    <ul class="preview-items">
+            `;
+            
+            cat.items?.forEach(item => {
+                const earned = item.pointsEarned !== null && item.pointsEarned !== undefined 
+                    ? item.pointsEarned 
+                    : '—';
+                if (earned !== '—') gradedItems++;
+                
+                const percentage = item.pointsEarned !== null && item.pointsEarned !== undefined && item.pointsPossible
+                    ? Math.round((item.pointsEarned / item.pointsPossible) * 100) + '%'
+                    : '';
+                
+                html += `<li>
+                    <span>${item.name}</span>
+                    <span style="color: var(--color-gray-400);">${earned}/${item.pointsPossible} ${percentage}</span>
+                </li>`;
+            });
+            
+            html += '</ul></div>';
+        });
+        
+        html += '</div>';
+        html += `<p class="preview-note">
+            ✅ Found ${totalItems} assignments (${gradedItems} graded). 
+            These will be added when you create the class. You can edit everything afterward.
+        </p>`;
+        
+        previewContainer.innerHTML = html;
+        previewContainer.style.display = 'block';
+    },
+    
+    addCategory(name = '', weight = 0) {
+        const list = document.getElementById('categoriesList');
+        const index = list.children.length;
+        
+        const categoryHtml = `
+            <div class="category-row" data-index="${index}">
+                <input type="text" class="form-input category-name" placeholder="Category name" value="${name}">
+                <div class="weight-input-group">
+                    <input type="number" class="form-input category-weight" min="0" max="100" value="${weight}">
+                    <span class="weight-suffix">%</span>
+                </div>
+                <button type="button" class="btn btn-icon btn-danger remove-category-btn">×</button>
             </div>
         `;
+        
+        list.insertAdjacentHTML('beforeend', categoryHtml);
+        this.updateTotalWeight();
+        this.bindCategoryEvents();
+    },
+    
+    updateTotalWeight() {
+        const weights = document.querySelectorAll('.category-weight');
+        let total = 0;
+        weights.forEach(w => {
+            total += parseInt(w.value) || 0;
+        });
+        
+        const totalSpan = document.getElementById('totalWeight');
+        const totalDiv = document.getElementById('weightTotal');
+        
+        if (totalSpan) totalSpan.textContent = total;
+        
+        if (totalDiv) {
+            if (total === 100) {
+                totalDiv.classList.remove('error');
+                totalDiv.classList.add('success');
+            } else {
+                totalDiv.classList.remove('success');
+                totalDiv.classList.add('error');
+            }
+        }
     },
     
     bindEvents() {
-        document.getElementById('cancelSetup')?.addEventListener('click', (e) => {
-            e.preventDefault();
+        document.getElementById('backBtn')?.addEventListener('click', () => {
             App.navigate('landing');
         });
         
-        document.getElementById('prevBtn')?.addEventListener('click', () => this.prevStep());
-        document.getElementById('nextBtn')?.addEventListener('click', () => this.nextStep());
-        document.getElementById('saveBtn')?.addEventListener('click', () => this.save());
-        document.getElementById('addCategoryBtn')?.addEventListener('click', () => this.addCategory());
-        
-        // Category inputs
-        document.querySelectorAll('.category-name').forEach(input => {
-            input.addEventListener('change', (e) => {
-                this.formData.categories[e.target.dataset.index].name = e.target.value;
-            });
+        document.getElementById('cancelBtn')?.addEventListener('click', () => {
+            App.navigate('landing');
         });
         
+        document.getElementById('addCategoryBtn')?.addEventListener('click', () => {
+            this.addCategory();
+        });
+        
+        document.getElementById('classSetupForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.saveClass();
+        });
+        
+        this.bindCategoryEvents();
+    },
+    
+    bindCategoryEvents() {
+        // Weight change listeners
         document.querySelectorAll('.category-weight').forEach(input => {
-            input.addEventListener('change', (e) => {
-                this.formData.categories[e.target.dataset.index].weight = parseFloat(e.target.value) || 0;
-                this.render();
-                this.bindEvents();
-            });
+            input.removeEventListener('input', this.updateTotalWeight);
+            input.addEventListener('input', () => this.updateTotalWeight());
         });
         
-        document.querySelectorAll('.category-row .delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.formData.categories.splice(e.target.dataset.index, 1);
-                this.render();
-                this.bindEvents();
-            });
+        // Remove category listeners
+        document.querySelectorAll('.remove-category-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.target.closest('.category-row')?.remove();
+                this.updateTotalWeight();
+            };
         });
     },
     
-    nextStep() {
-        // Validate current step
-        if (this.step === 1) {
-            this.formData.name = document.getElementById('className').value;
-            this.formData.creditHours = parseFloat(document.getElementById('creditHours').value);
-            this.formData.showOnlyCAndUp = document.getElementById('showOnlyCAndUp').checked;
-            
-            const validation = Validation.validateClassName(this.formData.name);
-            if (!validation.valid) {
-                alert(validation.error);
-                return;
-            }
+    async saveClass() {
+        const name = document.getElementById('className').value.trim();
+        const creditHours = parseInt(document.getElementById('creditHours').value);
+        
+        if (!name) {
+            alert('Please enter a class name');
+            return;
         }
         
-        this.step++;
-        this.render();
-        this.bindEvents();
-    },
-    
-    prevStep() {
-        this.step--;
-        this.render();
-        this.bindEvents();
-    },
-    
-    addCategory() {
-        this.formData.categories.push({ name: '', weight: 0 });
-        this.render();
-        this.bindEvents();
-    },
-    
-    async save() {
-        // Get grade scale values
-        const scaleContainer = document.querySelector('.grade-scale-editor');
-        this.formData.gradeScale = GradeScaleEditor.getValues(scaleContainer);
+        // Gather categories
+        const categoryRows = document.querySelectorAll('.category-row');
+        const categories = [];
+        
+        categoryRows.forEach(row => {
+            const catName = row.querySelector('.category-name').value.trim();
+            const weight = parseInt(row.querySelector('.category-weight').value) || 0;
+            
+            if (catName) {
+                categories.push({ name: catName, weight });
+            }
+        });
+        
+        if (categories.length === 0) {
+            alert('Please add at least one category');
+            return;
+        }
         
         try {
-            // Create the class
-            const newClass = await ClassService.create({
-                name: this.formData.name,
-                creditHours: this.formData.creditHours,
-                showOnlyCAndUp: this.formData.showOnlyCAndUp
-            });
+            let newClass;
             
-            // Update grade scale
-            await ClassService.updateGradeScale(newClass.id, this.formData.gradeScale);
-            
-            // Delete default categories and create custom ones
-            // First, get the class with its categories
-            const classData = await ClassService.getById(newClass.id);
-            
-            // Delete existing default categories
-            for (const cat of classData.categories) {
-                await CategoryService.delete(cat.id);
-            }
-            
-            // Create the user's categories
-            for (const cat of this.formData.categories) {
-                if (cat.name && cat.weight > 0) {
-                    await CategoryService.create({
-                        classId: newClass.id,
+            // Check if using local storage mode
+            if (!Storage.isGoogleUser()) {
+                // Create class locally
+                newClass = LocalDataService.createClass({ name, creditHours });
+                
+                // Add categories and items
+                for (const cat of categories) {
+                    const gradebookCat = this.parsedCategories?.find(c => c.name === cat.name);
+                    const newCategory = LocalDataService.addCategory(newClass.id, {
                         name: cat.name,
                         weight: cat.weight
                     });
+                    
+                    // Add grade items if we have gradebook data
+                    if (gradebookCat?.items) {
+                        for (const item of gradebookCat.items) {
+                            LocalDataService.addGradeItem(newClass.id, newCategory.id, {
+                                name: item.name,
+                                pointsEarned: item.pointsEarned,
+                                pointsPossible: item.pointsPossible || 100
+                            });
+                        }
+                    }
                 }
+                
+                // Refresh class with all data
+                newClass = LocalDataService.getClass(newClass.id);
+            } else {
+                // Create class via API
+                newClass = await ClassService.create({ name, creditHours });
+                
+                // Add categories
+                for (const cat of categories) {
+                    const gradebookCat = this.parsedCategories?.find(c => c.name === cat.name);
+                    const newCategory = await CategoryService.create(newClass.id, {
+                        name: cat.name,
+                        weight: cat.weight
+                    });
+                    
+                    // Add grade items if we have gradebook data
+                    if (gradebookCat?.items) {
+                        for (const item of gradebookCat.items) {
+                            await GradeService.create(newCategory.id, {
+                                name: item.name,
+                                pointsEarned: item.pointsEarned,
+                                pointsPossible: item.pointsPossible || 100
+                            });
+                        }
+                    }
+                }
+                
+                // Refresh class with all data
+                newClass = await ClassService.getById(newClass.id);
             }
             
-            // Navigate to the new class
+            // Navigate to class detail
             App.navigate('class', { classId: newClass.id });
         } catch (error) {
             console.error('Failed to create class:', error);
@@ -299,3 +362,4 @@ const ClassSetupPage = {
         }
     }
 };
+
