@@ -1,0 +1,49 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'GradeCalculator/frontend'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+5. Click **Commit changes**
+
+---
+
+## Step 3: Wait for Deploy
+
+1. Click **Actions** tab in your repo
+2. You'll see the workflow running
+3. Wait 1-2 minutes for it to finish (green checkmark)
+
+---
+
+## Step 4: Check Your Site
+
+Your site will be live at:
+```
+https://marceliirzu.github.io/grade-calculator/
