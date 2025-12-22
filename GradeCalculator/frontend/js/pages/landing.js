@@ -3,9 +3,8 @@ const LandingPage = {
     classes: [],
     
     async init() {
-        // Only skip landing page if logged in with Google (not dev login)
-        const user = Storage.getUser();
-        const isGoogleUser = user && user.googleId && !user.googleId.startsWith('dev-');
+        // Only skip landing page if logged in with Google (not local/dev user)
+        const isGoogleUser = Storage.isGoogleUser();
         
         if (!isGoogleUser) {
             this.renderLoginPrompt();
@@ -61,7 +60,7 @@ const LandingPage = {
                             </svg>
                             Sign in with Google
                         </button>
-                        <button class="btn btn-secondary btn-lg" id="devLoginBtn" style="margin-top: 16px;">
+                        <button class="btn btn-secondary btn-lg" id="continueLocalBtn" style="margin-top: 16px;">
                             Continue without logging in
                         </button>
                         <p class="login-note">Free to use • Your data stays private</p>
@@ -83,19 +82,16 @@ const LandingPage = {
             AuthService.signInWithGoogle();
         });
         
-        // Dev login (continue without signing in) - goes directly to app
-        document.getElementById('devLoginBtn')?.addEventListener('click', async () => {
-            try {
-                await AuthService.devLogin();
-                App.updateAuthUI();
-                // Load classes and show main app
-                await this.loadClasses();
-                this.render();
-                this.bindEvents();
-            } catch (e) {
-                console.error(e);
-                alert('Login failed. Is the backend running?');
-            }
+        // Continue without logging in (local storage mode)
+        document.getElementById('continueLocalBtn')?.addEventListener('click', async () => {
+            // Set local user mode
+            Storage.setLocalUser();
+            App.updateAuthUI();
+            
+            // Load classes and show main app
+            await this.loadClasses();
+            this.render();
+            this.bindEvents();
         });
     },
     
@@ -128,7 +124,12 @@ const LandingPage = {
     
     async loadClasses() {
         try {
-            this.classes = await ClassService.getAll();
+            // Use local storage if not Google user
+            if (!Storage.isGoogleUser()) {
+                this.classes = LocalDataService.getClasses();
+            } else {
+                this.classes = await ClassService.getAll();
+            }
         } catch (error) {
             console.error('Failed to load classes:', error);
             this.classes = [];
@@ -188,7 +189,12 @@ const LandingPage = {
     },
     
     async startAddClass() {
+        // First ask about syllabus
         const syllabusData = await Modal.showSyllabusPaste();
-        App.navigate('classSetup', { syllabusData });
+        
+        // Then ask about gradebook
+        const gradebookData = await Modal.showGradebookPaste();
+        
+        App.navigate('classSetup', { syllabusData, gradebookData });
     }
 };
