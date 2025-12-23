@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using System.Text.Json;
+using GradeCalculator.API.DTOs.Responses;
 
 namespace GradeCalculator.API.Controllers;
 
