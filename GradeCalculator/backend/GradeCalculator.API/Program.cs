@@ -62,6 +62,7 @@ builder.Services.AddCors(options =>
                 "http://127.0.0.1:5500",
                 "https://calcyourgpa.com",
                 "https://www.calcyourgpa.com"
+                "https://marceliirzu.github.io"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
