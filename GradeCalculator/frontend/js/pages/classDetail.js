@@ -11,7 +11,15 @@ const ClassDetailPage = {
         }
         
         try {
-            this.classData = await ClassService.getById(classId);
+            // Use local storage if not Google user
+            if (!Storage.isGoogleUser()) {
+                this.classData = LocalDataService.getClass(parseInt(classId));
+                if (!this.classData) {
+                    throw new Error('Class not found');
+                }
+            } else {
+                this.classData = await ClassService.getById(classId);
+            }
             this.render();
             this.bindEvents();
         } catch (error) {
@@ -23,8 +31,8 @@ const ClassDetailPage = {
     
     render() {
         const mainContent = document.getElementById('mainContent');
-        const currentGrade = this.classData.currentGrade;
-        const letterGrade = this.classData.letterGrade || '—';
+        const currentGrade = this.calculateClassGrade();
+        const letterGrade = this.getLetterGrade(currentGrade);
         const colorClass = Formatters.gradeColorClass(letterGrade);
         
         mainContent.innerHTML = `
@@ -65,6 +73,58 @@ const ClassDetailPage = {
         `;
     },
     
+    calculateClassGrade() {
+        const categories = this.classData.categories || [];
+        let totalWeight = 0;
+        let weightedSum = 0;
+        
+        categories.forEach(cat => {
+            const catGrade = this.calculateCategoryGrade(cat);
+            if (catGrade !== null) {
+                weightedSum += catGrade * cat.weight;
+                totalWeight += cat.weight;
+            }
+        });
+        
+        return totalWeight > 0 ? weightedSum / totalWeight : null;
+    },
+    
+    calculateCategoryGrade(category) {
+        const items = category.items || category.gradeItems || [];
+        if (items.length === 0) return null;
+        
+        let totalEarned = 0;
+        let totalPossible = 0;
+        
+        items.forEach(item => {
+            if (item.pointsEarned !== null && item.pointsEarned !== undefined) {
+                totalEarned += item.pointsEarned;
+                totalPossible += item.pointsPossible || 100;
+            }
+        });
+        
+        return totalPossible > 0 ? (totalEarned / totalPossible) * 100 : null;
+    },
+    
+    getLetterGrade(percentage) {
+        if (percentage === null) return '—';
+        const scale = this.classData.gradeScale || {};
+        
+        if (percentage >= (scale.aPlus || 97)) return 'A+';
+        if (percentage >= (scale.a || 93)) return 'A';
+        if (percentage >= (scale.aMinus || 90)) return 'A-';
+        if (percentage >= (scale.bPlus || 87)) return 'B+';
+        if (percentage >= (scale.b || 83)) return 'B';
+        if (percentage >= (scale.bMinus || 80)) return 'B-';
+        if (percentage >= (scale.cPlus || 77)) return 'C+';
+        if (percentage >= (scale.c || 73)) return 'C';
+        if (percentage >= (scale.cMinus || 70)) return 'C-';
+        if (percentage >= (scale.dPlus || 67)) return 'D+';
+        if (percentage >= (scale.d || 63)) return 'D';
+        if (percentage >= (scale.dMinus || 60)) return 'D-';
+        return 'F';
+    },
+    
     renderCategories() {
         const categories = this.classData.categories || [];
         
@@ -77,8 +137,10 @@ const ClassDetailPage = {
         }
         
         return categories.map(cat => {
-            const grade = cat.currentGrade !== null ? Formatters.percentage(cat.currentGrade) : '—';
-            const itemCount = cat.gradeItems?.length || 0;
+            const catGrade = this.calculateCategoryGrade(cat);
+            const grade = catGrade !== null ? Formatters.percentage(catGrade) : '—';
+            const items = cat.items || cat.gradeItems || [];
+            const itemCount = items.length;
             
             return `
                 <div class="category-card" data-category-id="${cat.id}">
@@ -111,7 +173,7 @@ const ClassDetailPage = {
                 const categoryId = card.dataset.categoryId;
                 App.navigate('category', { 
                     classId: this.classData.id, 
-                    categoryId: categoryId 
+                    categoryId: parseInt(categoryId)
                 });
             });
         });
@@ -162,11 +224,15 @@ const ClassDetailPage = {
             }
             
             try {
-                await CategoryService.create({
-                    classId: this.classData.id,
-                    name: name,
-                    weight: weight
-                });
+                if (!Storage.isGoogleUser()) {
+                    LocalDataService.addCategory(this.classData.id, { name, weight });
+                } else {
+                    await CategoryService.create({
+                        classId: this.classData.id,
+                        name: name,
+                        weight: weight
+                    });
+                }
                 Modal.hide();
                 // Refresh the page
                 await this.init({ classId: this.classData.id });
@@ -207,11 +273,15 @@ const ClassDetailPage = {
             }
             
             try {
-                await ClassService.update(this.classData.id, {
-                    name: name,
-                    creditHours: creditHours,
-                    showOnlyCAndUp: this.classData.showOnlyCAndUp
-                });
+                if (!Storage.isGoogleUser()) {
+                    LocalDataService.updateClass(this.classData.id, { name, creditHours });
+                } else {
+                    await ClassService.update(this.classData.id, {
+                        name: name,
+                        creditHours: creditHours,
+                        showOnlyCAndUp: this.classData.showOnlyCAndUp
+                    });
+                }
                 Modal.hide();
                 await this.init({ classId: this.classData.id });
             } catch (error) {
@@ -231,7 +301,11 @@ const ClassDetailPage = {
         
         if (confirmed) {
             try {
-                await ClassService.delete(this.classData.id);
+                if (!Storage.isGoogleUser()) {
+                    LocalDataService.deleteClass(this.classData.id);
+                } else {
+                    await ClassService.delete(this.classData.id);
+                }
                 App.navigate('landing');
             } catch (error) {
                 console.error('Failed to delete class:', error);
