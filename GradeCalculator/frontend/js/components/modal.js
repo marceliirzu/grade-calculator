@@ -1,5 +1,9 @@
 // Modal Component
 const Modal = {
+    init() {
+        // Modal initialization - nothing needed
+    },
+    
     show({ title, content, footer, size = 'medium', closable = true }) {
         const container = document.getElementById('modalContainer');
         
