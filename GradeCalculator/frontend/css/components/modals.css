@@ -1,5 +1,12 @@
 /* Modals - Dark Ferrari Theme */
+/* Modal Container */
+#modalContainer {
+    display: none;
+}
 
+#modalContainer.active {
+    display: block;
+}
 .modal-backdrop {
     position: fixed;
     top: 0;
