@@ -46,6 +46,7 @@ const Modal = {
         return new Promise((resolve) => {
             this.show({
                 title: '📄 Add Class from Syllabus',
+                size: 'large',
                 content: `
                     <div class="syllabus-paste-modal">
                         <p class="modal-description">
@@ -129,6 +130,7 @@ Grading:
         return new Promise((resolve) => {
             this.show({
                 title: '📊 Import Grades from Gradebook',
+                size: 'large',
                 content: `
                     <div class="syllabus-paste-modal">
                         <p class="modal-description">
