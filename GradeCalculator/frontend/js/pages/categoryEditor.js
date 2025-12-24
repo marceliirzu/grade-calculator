@@ -45,19 +45,74 @@ const CategoryEditorPage = {
     },
     
     calculateCategoryGrade() {
-        const items = this.categoryData.items || this.categoryData.gradeItems || [];
-        if (items.length === 0) return null;
+        let items = this.categoryData.items || this.categoryData.gradeItems || [];
         
+        // Only include items with grades
+        const gradedItems = items.filter(item => 
+            item.pointsEarned !== null && item.pointsEarned !== undefined
+        );
+        
+        if (gradedItems.length === 0) return null;
+        
+        // Get rules
+        const rules = this.categoryData.rules || [];
+        
+        // Apply rules
+        let processedItems = [...gradedItems];
+        
+        // Calculate percentages for sorting
+        processedItems = processedItems.map(item => ({
+            ...item,
+            percentage: item.pointsPossible > 0 ? (item.pointsEarned / item.pointsPossible) * 100 : 0
+        }));
+        
+        // Check for weighted distribution rule
+        const weightedRule = rules.find(r => r.type === 'WeightedDistribution' || r.type === 'WeightByScore');
+        
+        if (weightedRule && weightedRule.weightDistribution) {
+            // Sort by percentage descending
+            processedItems.sort((a, b) => b.percentage - a.percentage);
+            
+            const weights = typeof weightedRule.weightDistribution === 'string' 
+                ? JSON.parse(weightedRule.weightDistribution) 
+                : weightedRule.weightDistribution;
+            
+            // Apply weighted calculation
+            let weightedSum = 0;
+            let totalWeight = 0;
+            
+            processedItems.forEach((item, index) => {
+                const weight = weights[index] || weights[weights.length - 1] || 0;
+                weightedSum += item.percentage * weight;
+                totalWeight += weight;
+            });
+            
+            return totalWeight > 0 ? weightedSum / totalWeight : null;
+        }
+        
+        // Check for drop lowest rule
+        const dropLowestRule = rules.find(r => r.type === 'DropLowest');
+        if (dropLowestRule && dropLowestRule.value > 0) {
+            processedItems.sort((a, b) => a.percentage - b.percentage);
+            processedItems = processedItems.slice(dropLowestRule.value);
+        }
+        
+        // Check for keep highest rule
+        const keepHighestRule = rules.find(r => r.type === 'KeepHighest' || r.type === 'CountHighest');
+        if (keepHighestRule && keepHighestRule.value > 0) {
+            processedItems.sort((a, b) => b.percentage - a.percentage);
+            processedItems = processedItems.slice(0, keepHighestRule.value);
+        }
+        
+        // Standard calculation
         let totalEarned = 0;
         let totalPossible = 0;
         
-        items.forEach(item => {
-            if (item.pointsEarned !== null && item.pointsEarned !== undefined) {
-                totalEarned += item.pointsEarned;
-                // Extra credit: don't add to possible if pointsPossible is 0
-                if (item.pointsPossible > 0) {
-                    totalPossible += item.pointsPossible;
-                }
+        processedItems.forEach(item => {
+            totalEarned += item.pointsEarned;
+            // Extra credit: don't add to possible if pointsPossible is 0
+            if (item.pointsPossible > 0) {
+                totalPossible += item.pointsPossible;
             }
         });
         
@@ -72,6 +127,7 @@ const CategoryEditorPage = {
             : '—';
         
         const items = this.categoryData.items || this.categoryData.gradeItems || [];
+        const rules = this.categoryData.rules || [];
         
         mainContent.innerHTML = `
             <div class="category-editor-page">
@@ -97,6 +153,16 @@ const CategoryEditorPage = {
                     </div>
                 </header>
                 
+                <section class="rules-section">
+                    <div class="section-header">
+                        <h3>Grading Rules</h3>
+                        <button class="btn btn-secondary btn-sm" id="addRuleBtn">+ Add Rule</button>
+                    </div>
+                    <div class="rules-list" id="rulesList">
+                        ${this.renderRules(rules)}
+                    </div>
+                </section>
+                
                 <section class="grade-items-section">
                     <div class="grade-items-header">
                         <span class="grade-items-title">Grade Items</span>
@@ -113,6 +179,42 @@ const CategoryEditorPage = {
                 </section>
             </div>
         `;
+    },
+    
+    renderRules(rules) {
+        if (!rules || rules.length === 0) {
+            return `<p class="empty-rules">No grading rules. Add rules like "Drop Lowest" or "Weighted by Score".</p>`;
+        }
+        
+        return rules.map(rule => {
+            let description = '';
+            
+            switch(rule.type) {
+                case 'DropLowest':
+                    description = `Drop lowest ${rule.value} grade${rule.value > 1 ? 's' : ''}`;
+                    break;
+                case 'KeepHighest':
+                case 'CountHighest':
+                    description = `Keep highest ${rule.value} grade${rule.value > 1 ? 's' : ''}`;
+                    break;
+                case 'WeightedDistribution':
+                case 'WeightByScore':
+                    const weights = typeof rule.weightDistribution === 'string' 
+                        ? JSON.parse(rule.weightDistribution) 
+                        : rule.weightDistribution;
+                    description = `Weighted by rank: ${weights.map((w, i) => `#${i+1}: ${w}%`).join(', ')}`;
+                    break;
+                default:
+                    description = `${rule.type}: ${rule.value}`;
+            }
+            
+            return `
+                <div class="rule-item" data-rule-id="${rule.id}">
+                    <span class="rule-description">${description}</span>
+                    <button class="btn btn-ghost btn-icon delete-rule-btn" title="Remove Rule">🗑️</button>
+                </div>
+            `;
+        }).join('');
     },
     
     renderGradeItems() {
@@ -171,11 +273,23 @@ const CategoryEditorPage = {
         // Add grade
         document.getElementById('addGradeBtn')?.addEventListener('click', () => this.addGrade());
         
+        // Add rule
+        document.getElementById('addRuleBtn')?.addEventListener('click', () => this.showAddRuleModal());
+        
         // Edit category
         document.getElementById('editCategoryBtn')?.addEventListener('click', () => this.showEditCategoryModal());
         
         // Delete category
         document.getElementById('deleteCategoryBtn')?.addEventListener('click', () => this.deleteCategory());
+        
+        // Rules list events
+        document.getElementById('rulesList')?.addEventListener('click', async (e) => {
+            if (e.target.closest('.delete-rule-btn')) {
+                const ruleItem = e.target.closest('.rule-item');
+                const ruleId = parseInt(ruleItem.dataset.ruleId);
+                await this.deleteRule(ruleId);
+            }
+        });
         
         // Grade item events - use event delegation
         const gradeList = document.getElementById('gradeItemsList');
@@ -256,7 +370,8 @@ const CategoryEditorPage = {
                     pointsPossible: possible
                 });
             } else {
-                const item = this.categoryData.gradeItems.find(g => g.id === gradeId);
+                const items = this.categoryData.items || this.categoryData.gradeItems || [];
+                const item = items.find(g => g.id === gradeId);
                 await GradeService.update(gradeId, {
                     categoryId: this.categoryData.id,
                     name: name,
@@ -312,6 +427,179 @@ const CategoryEditorPage = {
                 console.error('Failed to delete grade:', error);
                 alert('Failed to delete grade');
             }
+        }
+    },
+    
+    async showAddRuleModal() {
+        Modal.show({
+            title: 'Add Grading Rule',
+            content: `
+                <div class="form-group">
+                    <label class="form-label">Rule Type</label>
+                    <select class="form-input" id="ruleType">
+                        <option value="DropLowest">Drop Lowest Grades</option>
+                        <option value="KeepHighest">Keep Highest Grades</option>
+                        <option value="WeightedDistribution">Weighted by Score Rank</option>
+                    </select>
+                </div>
+                <div id="ruleOptions">
+                    <div class="form-group" id="countOption">
+                        <label class="form-label">Number of Grades</label>
+                        <input type="number" class="form-input" id="ruleValue" value="1" min="1">
+                        <p class="form-help">How many grades to drop or keep</p>
+                    </div>
+                </div>
+                <div id="weightedOptions" style="display: none;">
+                    <p class="form-help" style="margin-bottom: var(--spacing-3);">
+                        Enter weights for each rank position. Weights should sum to 100%.
+                        <br><br>
+                        Example: If you have 4 exams and want the highest to count 50%, 
+                        middle two at 20% each, and lowest at 10%, enter: 50, 20, 20, 10
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label">Number of Items</label>
+                        <input type="number" class="form-input" id="weightedCount" value="4" min="2" max="20">
+                    </div>
+                    <div class="form-group" id="weightsInputGroup">
+                        <label class="form-label">Weights (highest to lowest)</label>
+                        <div id="weightsInputs"></div>
+                    </div>
+                </div>
+            `,
+            footer: `
+                <button class="btn btn-secondary" id="cancelRule">Cancel</button>
+                <button class="btn btn-primary" id="addRule">Add Rule</button>
+            `,
+            size: 'medium'
+        });
+        
+        const ruleTypeSelect = document.getElementById('ruleType');
+        const countOption = document.getElementById('countOption');
+        const weightedOptions = document.getElementById('weightedOptions');
+        const weightedCountInput = document.getElementById('weightedCount');
+        const weightsInputsContainer = document.getElementById('weightsInputs');
+        
+        // Generate weight inputs
+        const generateWeightInputs = (count) => {
+            const defaultWeights = this.getDefaultWeights(count);
+            weightsInputsContainer.innerHTML = Array.from({ length: count }, (_, i) => `
+                <div class="weight-input-row" style="display: flex; gap: var(--spacing-2); margin-bottom: var(--spacing-2); align-items: center;">
+                    <span style="min-width: 80px; color: var(--color-gray-400);">#${i + 1} ${i === 0 ? '(highest)' : i === count - 1 ? '(lowest)' : ''}</span>
+                    <input type="number" class="form-input weight-input" value="${defaultWeights[i]}" min="0" max="100" step="1" style="width: 80px;">
+                    <span style="color: var(--color-gray-400);">%</span>
+                </div>
+            `).join('');
+        };
+        
+        // Initial generation
+        generateWeightInputs(parseInt(weightedCountInput.value));
+        
+        // Toggle options based on rule type
+        ruleTypeSelect.addEventListener('change', () => {
+            if (ruleTypeSelect.value === 'WeightedDistribution') {
+                countOption.style.display = 'none';
+                weightedOptions.style.display = 'block';
+            } else {
+                countOption.style.display = 'block';
+                weightedOptions.style.display = 'none';
+            }
+        });
+        
+        // Regenerate weight inputs when count changes
+        weightedCountInput.addEventListener('change', () => {
+            generateWeightInputs(parseInt(weightedCountInput.value));
+        });
+        
+        document.getElementById('cancelRule').addEventListener('click', () => Modal.hide());
+        document.getElementById('addRule').addEventListener('click', async () => {
+            const type = ruleTypeSelect.value;
+            
+            try {
+                if (type === 'WeightedDistribution') {
+                    const weightInputs = document.querySelectorAll('.weight-input');
+                    const weights = Array.from(weightInputs).map(input => parseInt(input.value) || 0);
+                    const totalWeight = weights.reduce((a, b) => a + b, 0);
+                    
+                    if (totalWeight !== 100) {
+                        alert(`Weights must sum to 100%. Current total: ${totalWeight}%`);
+                        return;
+                    }
+                    
+                    if (!Storage.isGoogleUser()) {
+                        LocalDataService.addRule(this.classData.id, this.categoryData.id, {
+                            type: 'WeightedDistribution',
+                            value: weights.length,
+                            weightDistribution: weights
+                        });
+                    } else {
+                        await CategoryService.addRule(this.categoryData.id, {
+                            categoryId: this.categoryData.id,
+                            type: 'WeightedDistribution',
+                            value: weights.length,
+                            weightDistribution: JSON.stringify(weights)
+                        });
+                    }
+                } else {
+                    const value = parseInt(document.getElementById('ruleValue').value);
+                    
+                    if (!Storage.isGoogleUser()) {
+                        LocalDataService.addRule(this.classData.id, this.categoryData.id, {
+                            type: type,
+                            value: value
+                        });
+                    } else {
+                        await CategoryService.addRule(this.categoryData.id, {
+                            categoryId: this.categoryData.id,
+                            type: type,
+                            value: value
+                        });
+                    }
+                }
+                
+                Modal.hide();
+                await this.refresh();
+            } catch (error) {
+                console.error('Failed to add rule:', error);
+                alert('Failed to add rule');
+            }
+        });
+    },
+    
+    getDefaultWeights(count) {
+        // Generate sensible default weights
+        switch(count) {
+            case 2: return [60, 40];
+            case 3: return [50, 30, 20];
+            case 4: return [50, 20, 20, 10];
+            case 5: return [40, 25, 20, 10, 5];
+            default:
+                // Distribute weights with higher weight for top scores
+                const weights = [];
+                let remaining = 100;
+                for (let i = 0; i < count; i++) {
+                    if (i === count - 1) {
+                        weights.push(remaining);
+                    } else {
+                        const weight = Math.round(remaining * (0.4 - (i * 0.05)));
+                        weights.push(Math.max(weight, 5));
+                        remaining -= weights[i];
+                    }
+                }
+                return weights;
+        }
+    },
+    
+    async deleteRule(ruleId) {
+        try {
+            if (!Storage.isGoogleUser()) {
+                LocalDataService.deleteRule(this.classData.id, this.categoryData.id, ruleId);
+            } else {
+                await CategoryService.deleteRule(ruleId);
+            }
+            await this.refresh();
+        } catch (error) {
+            console.error('Failed to delete rule:', error);
+            alert('Failed to delete rule');
         }
     },
     
