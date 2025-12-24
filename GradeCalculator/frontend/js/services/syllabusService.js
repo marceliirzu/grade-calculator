@@ -2,7 +2,7 @@
 const SyllabusService = {
     async parse(syllabusText) {
         const response = await Api.post('/syllabus/parse', { 
-            syllabusText: syllabusText 
+            content: syllabusText 
         });
         
         if (!response.success) {
