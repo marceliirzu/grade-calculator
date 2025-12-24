@@ -12,13 +12,28 @@ const CategoryEditorPage = {
         }
         
         try {
-            this.classData = await ClassService.getById(classId);
-            this.categoryData = this.classData.categories.find(c => c.id === parseInt(categoryId));
+            // Use local storage if not Google user
+            if (!Storage.isGoogleUser()) {
+                this.classData = LocalDataService.getClass(parseInt(classId));
+                if (!this.classData) {
+                    throw new Error('Class not found');
+                }
+            } else {
+                this.classData = await ClassService.getById(classId);
+            }
+            
+            const categories = this.classData.categories || [];
+            this.categoryData = categories.find(c => c.id === parseInt(categoryId));
             
             if (!this.categoryData) {
                 alert('Category not found');
                 App.navigate('class', { classId });
                 return;
+            }
+            
+            // Ensure items array exists
+            if (!this.categoryData.items) {
+                this.categoryData.items = this.categoryData.gradeItems || [];
             }
             
             this.render();
@@ -29,11 +44,34 @@ const CategoryEditorPage = {
         }
     },
     
+    calculateCategoryGrade() {
+        const items = this.categoryData.items || this.categoryData.gradeItems || [];
+        if (items.length === 0) return null;
+        
+        let totalEarned = 0;
+        let totalPossible = 0;
+        
+        items.forEach(item => {
+            if (item.pointsEarned !== null && item.pointsEarned !== undefined) {
+                totalEarned += item.pointsEarned;
+                // Extra credit: don't add to possible if pointsPossible is 0
+                if (item.pointsPossible > 0) {
+                    totalPossible += item.pointsPossible;
+                }
+            }
+        });
+        
+        return totalPossible > 0 ? (totalEarned / totalPossible) * 100 : null;
+    },
+    
     render() {
         const mainContent = document.getElementById('mainContent');
-        const percentage = this.categoryData.currentGrade !== null 
-            ? Formatters.percentage(this.categoryData.currentGrade) 
+        const currentGrade = this.calculateCategoryGrade();
+        const percentage = currentGrade !== null 
+            ? Formatters.percentage(currentGrade) 
             : '—';
+        
+        const items = this.categoryData.items || this.categoryData.gradeItems || [];
         
         mainContent.innerHTML = `
             <div class="category-editor-page">
@@ -51,7 +89,7 @@ const CategoryEditorPage = {
                         <div class="category-meta">
                             <span>Weight: ${this.categoryData.weight}%</span>
                             <span>•</span>
-                            <span>${this.categoryData.gradeItems?.length || 0} items</span>
+                            <span>${items.length} items</span>
                         </div>
                     </div>
                     <div class="category-grade-display">
@@ -69,13 +107,16 @@ const CategoryEditorPage = {
                     </div>
                 </section>
                 
-                ${RulesEditor.render(this.categoryData.rules)}
+                <section class="category-actions">
+                    <button class="btn btn-secondary" id="editCategoryBtn">Edit Category</button>
+                    <button class="btn btn-danger" id="deleteCategoryBtn">Delete Category</button>
+                </section>
             </div>
         `;
     },
     
     renderGradeItems() {
-        const items = this.categoryData.gradeItems || [];
+        const items = this.categoryData.items || this.categoryData.gradeItems || [];
         
         if (items.length === 0) {
             return `
@@ -89,7 +130,9 @@ const CategoryEditorPage = {
     },
     
     renderGradeItem(item) {
-        const percentage = item.percentage !== null ? Formatters.percentage(item.percentage) : '—';
+        const percentage = (item.pointsEarned !== null && item.pointsPossible > 0) 
+            ? Formatters.percentage((item.pointsEarned / item.pointsPossible) * 100)
+            : '—';
         const whatIfClass = item.isWhatIf ? 'what-if' : '';
         const earnedValue = item.pointsEarned !== null ? item.pointsEarned : '';
         
@@ -102,7 +145,7 @@ const CategoryEditorPage = {
                 <div class="grade-item-score">
                     <input type="number" class="earned-input" value="${earnedValue}" placeholder="—" step="0.1" min="0">
                     <span class="divider">/</span>
-                    <input type="number" class="possible-input" value="${item.pointsPossible}" step="0.1" min="0.1">
+                    <input type="number" class="possible-input" value="${item.pointsPossible}" step="0.1" min="0">
                 </div>
                 <div class="grade-item-percentage">${percentage}</div>
                 <div class="grade-item-actions">
@@ -128,19 +171,26 @@ const CategoryEditorPage = {
         // Add grade
         document.getElementById('addGradeBtn')?.addEventListener('click', () => this.addGrade());
         
+        // Edit category
+        document.getElementById('editCategoryBtn')?.addEventListener('click', () => this.showEditCategoryModal());
+        
+        // Delete category
+        document.getElementById('deleteCategoryBtn')?.addEventListener('click', () => this.deleteCategory());
+        
         // Grade item events - use event delegation
         const gradeList = document.getElementById('gradeItemsList');
         
-        // Name changes
+        // Input changes
         gradeList?.addEventListener('change', async (e) => {
-            if (e.target.classList.contains('name-input')) {
-                const gradeId = e.target.closest('.grade-item').dataset.gradeId;
-                await this.updateGradeName(gradeId, e.target.value);
-            }
-            if (e.target.classList.contains('earned-input') || e.target.classList.contains('possible-input')) {
-                const gradeItem = e.target.closest('.grade-item');
-                const gradeId = gradeItem.dataset.gradeId;
-                await this.updateGradeScore(gradeId, gradeItem);
+            const gradeItem = e.target.closest('.grade-item');
+            if (!gradeItem) return;
+            
+            const gradeId = parseInt(gradeItem.dataset.gradeId);
+            
+            if (e.target.classList.contains('name-input') || 
+                e.target.classList.contains('earned-input') || 
+                e.target.classList.contains('possible-input')) {
+                await this.updateGrade(gradeId, gradeItem);
             }
         });
         
@@ -149,7 +199,7 @@ const CategoryEditorPage = {
             const gradeItem = e.target.closest('.grade-item');
             if (!gradeItem) return;
             
-            const gradeId = gradeItem.dataset.gradeId;
+            const gradeId = parseInt(gradeItem.dataset.gradeId);
             
             if (e.target.closest('.what-if-btn')) {
                 await this.toggleWhatIf(gradeId);
@@ -158,22 +208,29 @@ const CategoryEditorPage = {
                 await this.deleteGrade(gradeId);
             }
         });
-        
-        // Rules
-        document.getElementById('addRuleBtn')?.addEventListener('click', () => this.showAddRuleModal());
     },
     
     async addGrade() {
-        const itemCount = this.categoryData.gradeItems?.length || 0;
+        const items = this.categoryData.items || this.categoryData.gradeItems || [];
+        const itemCount = items.length;
         
         try {
-            await GradeService.create({
-                categoryId: this.categoryData.id,
-                name: `Grade ${itemCount + 1}`,
-                pointsEarned: null,
-                pointsPossible: 100,
-                isWhatIf: false
-            });
+            if (!Storage.isGoogleUser()) {
+                LocalDataService.addGradeItem(this.classData.id, this.categoryData.id, {
+                    name: `Grade ${itemCount + 1}`,
+                    pointsEarned: null,
+                    pointsPossible: 100,
+                    isWhatIf: false
+                });
+            } else {
+                await GradeService.create({
+                    categoryId: this.categoryData.id,
+                    name: `Grade ${itemCount + 1}`,
+                    pointsEarned: null,
+                    pointsPossible: 100,
+                    isWhatIf: false
+                });
+            }
             
             await this.refresh();
         } catch (error) {
@@ -182,42 +239,32 @@ const CategoryEditorPage = {
         }
     },
     
-    async updateGradeName(gradeId, name) {
-        const item = this.categoryData.gradeItems.find(g => g.id === parseInt(gradeId));
-        if (!item) return;
-        
-        try {
-            await GradeService.update(gradeId, {
-                categoryId: this.categoryData.id,
-                name: name,
-                pointsEarned: item.pointsEarned,
-                pointsPossible: item.pointsPossible,
-                isWhatIf: item.isWhatIf
-            });
-        } catch (error) {
-            console.error('Failed to update grade name:', error);
-        }
-    },
-    
-    async updateGradeScore(gradeId, gradeElement) {
-        const item = this.categoryData.gradeItems.find(g => g.id === parseInt(gradeId));
-        if (!item) return;
-        
+    async updateGrade(gradeId, gradeElement) {
+        const nameInput = gradeElement.querySelector('.name-input');
         const earnedInput = gradeElement.querySelector('.earned-input');
         const possibleInput = gradeElement.querySelector('.possible-input');
-        const nameInput = gradeElement.querySelector('.name-input');
         
+        const name = nameInput.value;
         const earned = earnedInput.value !== '' ? parseFloat(earnedInput.value) : null;
         const possible = parseFloat(possibleInput.value) || 100;
         
         try {
-            await GradeService.update(gradeId, {
-                categoryId: this.categoryData.id,
-                name: nameInput.value,
-                pointsEarned: earned,
-                pointsPossible: possible,
-                isWhatIf: item.isWhatIf
-            });
+            if (!Storage.isGoogleUser()) {
+                LocalDataService.updateGradeItem(this.classData.id, this.categoryData.id, gradeId, {
+                    name: name,
+                    pointsEarned: earned,
+                    pointsPossible: possible
+                });
+            } else {
+                const item = this.categoryData.gradeItems.find(g => g.id === gradeId);
+                await GradeService.update(gradeId, {
+                    categoryId: this.categoryData.id,
+                    name: name,
+                    pointsEarned: earned,
+                    pointsPossible: possible,
+                    isWhatIf: item?.isWhatIf || false
+                });
+            }
             
             await this.refresh();
         } catch (error) {
@@ -228,7 +275,17 @@ const CategoryEditorPage = {
     
     async toggleWhatIf(gradeId) {
         try {
-            await GradeService.toggleWhatIf(gradeId);
+            if (!Storage.isGoogleUser()) {
+                const items = this.categoryData.items || this.categoryData.gradeItems || [];
+                const item = items.find(g => g.id === gradeId);
+                if (item) {
+                    LocalDataService.updateGradeItem(this.classData.id, this.categoryData.id, gradeId, {
+                        isWhatIf: !item.isWhatIf
+                    });
+                }
+            } else {
+                await GradeService.toggleWhatIf(gradeId);
+            }
             await this.refresh();
         } catch (error) {
             console.error('Failed to toggle what-if:', error);
@@ -245,7 +302,11 @@ const CategoryEditorPage = {
         
         if (confirmed) {
             try {
-                await GradeService.delete(gradeId);
+                if (!Storage.isGoogleUser()) {
+                    LocalDataService.deleteGradeItem(this.classData.id, this.categoryData.id, gradeId);
+                } else {
+                    await GradeService.delete(gradeId);
+                }
                 await this.refresh();
             } catch (error) {
                 console.error('Failed to delete grade:', error);
@@ -254,47 +315,75 @@ const CategoryEditorPage = {
         }
     },
     
-    async showAddRuleModal() {
+    async showEditCategoryModal() {
         Modal.show({
-            title: 'Add Grading Rule',
+            title: 'Edit Category',
             content: `
                 <div class="form-group">
-                    <label class="form-label">Rule Type</label>
-                    <select class="form-input" id="ruleType">
-                        <option value="DropLowest">Drop Lowest</option>
-                        <option value="CountHighest">Count Highest</option>
-                    </select>
+                    <label class="form-label">Category Name</label>
+                    <input type="text" class="form-input" id="editCategoryName" value="${this.categoryData.name}">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Number of Grades</label>
-                    <input type="number" class="form-input" id="ruleValue" value="1" min="1">
-                    <p class="form-help">How many grades to drop or count</p>
+                    <label class="form-label">Weight (%)</label>
+                    <input type="number" class="form-input" id="editCategoryWeight" value="${this.categoryData.weight}" min="0" max="100">
                 </div>
             `,
             footer: `
-                <button class="btn btn-secondary" id="cancelRule">Cancel</button>
-                <button class="btn btn-primary" id="addRule">Add Rule</button>
+                <button class="btn btn-secondary" id="cancelEditCategory">Cancel</button>
+                <button class="btn btn-primary" id="saveEditCategory">Save</button>
             `
         });
         
-        document.getElementById('cancelRule').addEventListener('click', () => Modal.hide());
-        document.getElementById('addRule').addEventListener('click', async () => {
-            const type = document.getElementById('ruleType').value;
-            const value = parseInt(document.getElementById('ruleValue').value);
+        document.getElementById('cancelEditCategory').addEventListener('click', () => Modal.hide());
+        document.getElementById('saveEditCategory').addEventListener('click', async () => {
+            const name = document.getElementById('editCategoryName').value.trim();
+            const weight = parseFloat(document.getElementById('editCategoryWeight').value);
+            
+            if (!name) {
+                alert('Please enter a category name');
+                return;
+            }
             
             try {
-                await CategoryService.addRule(this.categoryData.id, {
-                    categoryId: this.categoryData.id,
-                    type: type,
-                    value: value
-                });
+                if (!Storage.isGoogleUser()) {
+                    LocalDataService.updateCategory(this.classData.id, this.categoryData.id, { name, weight });
+                } else {
+                    await CategoryService.update(this.categoryData.id, {
+                        classId: this.classData.id,
+                        name: name,
+                        weight: weight
+                    });
+                }
                 Modal.hide();
                 await this.refresh();
             } catch (error) {
-                console.error('Failed to add rule:', error);
-                alert('Failed to add rule');
+                console.error('Failed to update category:', error);
+                alert('Failed to update category');
             }
         });
+    },
+    
+    async deleteCategory() {
+        const confirmed = await Modal.confirm({
+            title: 'Delete Category',
+            message: `Are you sure you want to delete "${this.categoryData.name}"? All grades in this category will be deleted.`,
+            confirmText: 'Delete',
+            danger: true
+        });
+        
+        if (confirmed) {
+            try {
+                if (!Storage.isGoogleUser()) {
+                    LocalDataService.deleteCategory(this.classData.id, this.categoryData.id);
+                } else {
+                    await CategoryService.delete(this.categoryData.id);
+                }
+                App.navigate('class', { classId: this.classData.id });
+            } catch (error) {
+                console.error('Failed to delete category:', error);
+                alert('Failed to delete category');
+            }
+        }
     },
     
     async refresh() {
