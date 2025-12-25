@@ -164,24 +164,6 @@ const StartPage = {
     }
 };
 
-// Formatters utility
-const Formatters = {
-    percentage(value) {
-        if (value === null || value === undefined) return '—';
-        return `${value.toFixed(1)}%`;
-    },
-    
-    gradeColorClass(letterGrade) {
-        if (!letterGrade || letterGrade === '—') return '';
-        
-        if (letterGrade.startsWith('A')) return 'grade-a';
-        if (letterGrade.startsWith('B')) return 'grade-b';
-        if (letterGrade.startsWith('C')) return 'grade-c';
-        if (letterGrade.startsWith('D')) return 'grade-d';
-        return 'grade-f';
-    }
-};
-
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize modal
@@ -195,6 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize app
     App.init();
     
+    // Mark body as loaded for fade-in
+    document.body.classList.add('loaded');
+});
     // Mark body as loaded for fade-in
     document.body.classList.add('loaded');
 });
