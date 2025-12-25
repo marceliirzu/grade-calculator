@@ -1,185 +1,212 @@
-// Landing Page
+// Landing Page - Shows classes list (main page after initial visit)
 const LandingPage = {
     classes: [],
     
     async init() {
-        // Only skip landing page if logged in with Google (not local/dev user)
-        const isGoogleUser = Storage.isGoogleUser();
-        
-        if (!isGoogleUser) {
-            this.renderLoginPrompt();
-            return;
-        }
+        // Mark that user has visited (so we don't show start page again)
+        sessionStorage.setItem('gc_visited', 'true');
         
         await this.loadClasses();
         this.render();
         this.bindEvents();
     },
     
-    renderLoginPrompt() {
-        const mainContent = document.getElementById('mainContent');
-        
-        mainContent.innerHTML = `
-            <div class="login-prompt">
-                <div class="login-hero">
-                    <div class="hero-logo-animation" id="heroLogo">
-                        <span class="digit" id="heroDigit1">0</span>
-                        <span class="dot">.</span>
-                        <span class="digit" id="heroDigit2">0</span>
-                        <span class="digit" id="heroDigit3">0</span>
-                    </div>
-                    <h1 class="hero-title">Welcome to the Best GPA Calculator</h1>
-                    <p class="hero-subtitle">The smart grade calculator that helps with the math so you have more time to stress</p>
-                    
-                    <div class="features-list">
-                        <div class="feature-item">
-                            <span class="feature-icon">✨</span>
-                            <span>AI automatically extracts grading info from your syllabus</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">📈</span>
-                            <span>Track your GPA across all your classes</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">🎯</span>
-                            <span>What-if mode to plan your grades</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">⚡</span>
-                            <span>Special grading rules (ex. drop lowest exam)</span>
-                        </div>
-                    </div>
-                    
-                    <div class="login-cta">
-                        <button class="google-btn" id="googleSignInBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                            </svg>
-                            Sign in with Google
-                        </button>
-                        <button class="btn btn-secondary btn-lg" id="continueLocalBtn" style="margin-top: 16px;">
-                            Continue without logging in
-                        </button>
-                        <p class="login-note">Free to use • Your data stays private</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Animate the hero logo
-        this.animateHeroLogo();
-        
-        // Re-run animation on click
-        document.getElementById('heroLogo')?.addEventListener('click', () => {
-            this.animateHeroLogo();
-        });
-        
-        // Google Sign-in
-        document.getElementById('googleSignInBtn')?.addEventListener('click', () => {
-            AuthService.signInWithGoogle();
-        });
-        
-        // Continue without logging in (local storage mode)
-        document.getElementById('continueLocalBtn')?.addEventListener('click', async () => {
-            // Set local user mode
-            Storage.setLocalUser();
-            App.updateAuthUI();
-            
-            // Load classes and show main app
-            await this.loadClasses();
-            this.render();
-            this.bindEvents();
-        });
-    },
-    
-    animateHeroLogo() {
-        const digit1 = document.getElementById('heroDigit1');
-        const digit2 = document.getElementById('heroDigit2');
-        const digit3 = document.getElementById('heroDigit3');
-        
-        if (!digit1 || !digit2 || !digit3) return;
-        
-        const chars = '0123456789';
-        let frame = 0;
-        const totalFrames = 20;
-        
-        const interval = setInterval(() => {
-            frame++;
-            
-            if (frame < totalFrames) {
-                digit1.textContent = chars[Math.floor(Math.random() * 10)];
-                digit2.textContent = chars[Math.floor(Math.random() * 10)];
-                digit3.textContent = chars[Math.floor(Math.random() * 10)];
-            } else {
-                clearInterval(interval);
-                digit1.textContent = 'G';
-                digit2.textContent = 'P';
-                digit3.textContent = 'A';
-            }
-        }, 50);
-    },
-    
     async loadClasses() {
-        try {
-            // Use local storage if not Google user
-            if (!Storage.isGoogleUser()) {
-                this.classes = LocalDataService.getClasses();
-            } else {
+        if (!Storage.isGoogleUser()) {
+            // Load from local storage for non-Google users
+            this.classes = LocalDataService.getClasses();
+        } else {
+            try {
                 this.classes = await ClassService.getAll();
+            } catch (error) {
+                console.error('Failed to load classes:', error);
+                this.classes = [];
             }
-        } catch (error) {
-            console.error('Failed to load classes:', error);
-            this.classes = [];
         }
+    },
+    
+    calculateOverallGPA() {
+        if (this.classes.length === 0) return null;
+        
+        let totalPoints = 0;
+        let totalCredits = 0;
+        
+        this.classes.forEach(cls => {
+            const grade = this.calculateClassGrade(cls);
+            if (grade !== null) {
+                const letterGrade = this.getLetterGrade(grade, cls.gradeScale);
+                const gpaValue = this.getGPAValue(letterGrade);
+                const credits = cls.creditHours || 3;
+                
+                totalPoints += gpaValue * credits;
+                totalCredits += credits;
+            }
+        });
+        
+        return totalCredits > 0 ? totalPoints / totalCredits : null;
+    },
+    
+    calculateClassGrade(cls) {
+        const categories = cls.categories || [];
+        if (categories.length === 0) return null;
+        
+        let weightedSum = 0;
+        let totalWeight = 0;
+        
+        categories.forEach(cat => {
+            const catGrade = this.calculateCategoryGrade(cat);
+            if (catGrade !== null && cat.weight > 0) {
+                weightedSum += catGrade * cat.weight;
+                totalWeight += cat.weight;
+            }
+        });
+        
+        return totalWeight > 0 ? weightedSum / totalWeight : null;
+    },
+    
+    calculateCategoryGrade(category) {
+        const items = category.items || category.gradeItems || [];
+        if (items.length === 0) return null;
+        
+        // Only graded items
+        const gradedItems = items.filter(item => 
+            item.pointsEarned !== null && item.pointsEarned !== undefined
+        );
+        
+        if (gradedItems.length === 0) return null;
+        
+        // Separate regular items from extra credit
+        const regularItems = gradedItems.filter(item => item.pointsPossible > 0);
+        const extraCreditItems = gradedItems.filter(item => item.pointsPossible === 0);
+        
+        // Point-based calculation
+        let totalEarned = 0;
+        let totalPossible = 0;
+        
+        regularItems.forEach(item => {
+            totalEarned += item.pointsEarned;
+            totalPossible += item.pointsPossible;
+        });
+        
+        // Add extra credit
+        extraCreditItems.forEach(item => {
+            totalEarned += item.pointsEarned;
+        });
+        
+        return totalPossible > 0 ? (totalEarned / totalPossible) * 100 : null;
+    },
+    
+    getLetterGrade(percentage, gradeScale = {}) {
+        if (percentage === null) return '—';
+        
+        if (percentage >= (gradeScale.aPlus || 97)) return 'A+';
+        if (percentage >= (gradeScale.a || 93)) return 'A';
+        if (percentage >= (gradeScale.aMinus || 90)) return 'A-';
+        if (percentage >= (gradeScale.bPlus || 87)) return 'B+';
+        if (percentage >= (gradeScale.b || 83)) return 'B';
+        if (percentage >= (gradeScale.bMinus || 80)) return 'B-';
+        if (percentage >= (gradeScale.cPlus || 77)) return 'C+';
+        if (percentage >= (gradeScale.c || 73)) return 'C';
+        if (percentage >= (gradeScale.cMinus || 70)) return 'C-';
+        if (percentage >= (gradeScale.dPlus || 67)) return 'D+';
+        if (percentage >= (gradeScale.d || 63)) return 'D';
+        if (percentage >= (gradeScale.dMinus || 60)) return 'D-';
+        return 'F';
+    },
+    
+    getGPAValue(letterGrade) {
+        const scale = {
+            'A+': CONFIG.A_PLUS_VALUE || 4.0,
+            'A': 4.0, 'A-': 3.67,
+            'B+': 3.33, 'B': 3.0, 'B-': 2.67,
+            'C+': 2.33, 'C': 2.0, 'C-': 1.67,
+            'D+': 1.33, 'D': 1.0, 'D-': 0.67,
+            'F': 0.0
+        };
+        return scale[letterGrade] || 0;
     },
     
     render() {
         const mainContent = document.getElementById('mainContent');
+        const gpa = this.calculateOverallGPA();
+        
+        // Update header GPA badge
+        const gpaBadge = document.querySelector('.gpa-value');
+        if (gpaBadge) {
+            gpaBadge.textContent = gpa !== null ? gpa.toFixed(2) : '—';
+        }
         
         mainContent.innerHTML = `
             <div class="landing-page">
-                <section class="classes-section">
-                    <div class="classes-header">
-                        <h2 class="classes-title">My Classes</h2>
+                <header class="page-header">
+                    <h1>My Classes</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" id="addClassBtn">+ Add Class</button>
                     </div>
-                    <div class="classes-grid" id="classesGrid">
-                        ${this.renderClasses()}
-                    </div>
-                </section>
+                </header>
                 
-                <aside class="gpa-sidebar">
-                    ${GpaDisplay.render(this.classes)}
-                </aside>
+                ${this.classes.length === 0 ? this.renderEmptyState() : this.renderClassGrid()}
             </div>
         `;
     },
     
-    renderClasses() {
-        if (this.classes.length === 0) {
-            return `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📚</div>
-                    <h3 class="empty-state-title">No Classes Yet</h3>
-                    <p class="empty-state-text">Add your first class to start tracking your grades.</p>
-                    <button class="btn btn-primary btn-lg" id="emptyAddBtn">+ Add Class</button>
-                </div>
-            `;
-        }
+    renderEmptyState() {
+        return `
+            <div class="empty-state">
+                <div class="empty-icon">📚</div>
+                <h2>No classes yet</h2>
+                <p>Add your first class to start tracking your grades</p>
+                <button class="btn btn-primary btn-lg" id="addFirstClassBtn">+ Add Your First Class</button>
+            </div>
+        `;
+    },
+    
+    renderClassGrid() {
+        return `
+            <div class="classes-grid">
+                ${this.classes.map(cls => this.renderClassCard(cls)).join('')}
+            </div>
+        `;
+    },
+    
+    renderClassCard(cls) {
+        const grade = this.calculateClassGrade(cls);
+        const letterGrade = this.getLetterGrade(grade, cls.gradeScale);
+        const percentage = grade !== null ? `${grade.toFixed(1)}%` : '—';
+        const colorClass = Formatters.gradeColorClass(letterGrade);
+        const categories = cls.categories || [];
         
-        const cards = this.classes.map(c => ClassCard.render(c)).join('');
-        return cards + ClassCard.renderAddButton();
+        return `
+            <div class="class-card" data-class-id="${cls.id}">
+                <div class="class-card-header">
+                    <h3 class="class-name">${cls.name}</h3>
+                    <span class="credit-hours">${cls.creditHours} credits</span>
+                </div>
+                <div class="class-card-body">
+                    <div class="class-grade ${colorClass}">
+                        <span class="letter-grade">${letterGrade}</span>
+                        <span class="percentage">${percentage}</span>
+                    </div>
+                    <div class="class-categories">
+                        ${categories.slice(0, 3).map(cat => `
+                            <span class="category-chip">${cat.name}</span>
+                        `).join('')}
+                        ${categories.length > 3 ? `<span class="category-chip">+${categories.length - 3} more</span>` : ''}
+                    </div>
+                </div>
+                <div class="class-card-footer">
+                    <span class="click-hint">Click to view details →</span>
+                </div>
+            </div>
+        `;
     },
     
     bindEvents() {
-        const addBtn = document.getElementById('addClassBtn');
-        const emptyAddBtn = document.getElementById('emptyAddBtn');
+        // Add class buttons
+        document.getElementById('addClassBtn')?.addEventListener('click', () => this.showAddClassOptions());
+        document.getElementById('addFirstClassBtn')?.addEventListener('click', () => this.showAddClassOptions());
         
-        if (addBtn) addBtn.addEventListener('click', () => this.startAddClass());
-        if (emptyAddBtn) emptyAddBtn.addEventListener('click', () => this.startAddClass());
-        
+        // Class card clicks
         document.querySelectorAll('.class-card').forEach(card => {
             card.addEventListener('click', () => {
                 const classId = card.dataset.classId;
@@ -188,13 +215,53 @@ const LandingPage = {
         });
     },
     
-    async startAddClass() {
-        // First ask about syllabus
-        const syllabusData = await Modal.showSyllabusPaste();
+    async showAddClassOptions() {
+        Modal.show({
+            title: 'Add New Class',
+            content: `
+                <div class="add-class-options">
+                    <p class="modal-description">Choose how you'd like to add your class:</p>
+                    <div class="option-buttons">
+                        <button class="btn btn-option" id="optionSyllabus">
+                            <span class="option-icon">📄</span>
+                            <span class="option-title">Paste Syllabus</span>
+                            <span class="option-desc">AI extracts grading info automatically</span>
+                        </button>
+                        <button class="btn btn-option" id="optionGradebook">
+                            <span class="option-icon">📊</span>
+                            <span class="option-title">Import Gradebook</span>
+                            <span class="option-desc">Paste grades from your LMS</span>
+                        </button>
+                        <button class="btn btn-option" id="optionManual">
+                            <span class="option-icon">✏️</span>
+                            <span class="option-title">Enter Manually</span>
+                            <span class="option-desc">Set up class yourself</span>
+                        </button>
+                    </div>
+                </div>
+            `,
+            size: 'medium'
+        });
         
-        // Then ask about gradebook
-        const gradebookData = await Modal.showGradebookPaste();
+        document.getElementById('optionSyllabus')?.addEventListener('click', async () => {
+            Modal.hide();
+            const result = await Modal.showSyllabusPaste();
+            if (result) {
+                App.navigate('setup', { syllabusData: result });
+            }
+        });
         
-        App.navigate('classSetup', { syllabusData, gradebookData });
+        document.getElementById('optionGradebook')?.addEventListener('click', async () => {
+            Modal.hide();
+            const result = await Modal.showGradebookPaste();
+            if (result) {
+                App.navigate('setup', { gradebookData: result });
+            }
+        });
+        
+        document.getElementById('optionManual')?.addEventListener('click', () => {
+            Modal.hide();
+            App.navigate('setup');
+        });
     }
 };

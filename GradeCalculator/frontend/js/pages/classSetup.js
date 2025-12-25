@@ -362,4 +362,3 @@ const ClassSetupPage = {
         }
     }
 };
-

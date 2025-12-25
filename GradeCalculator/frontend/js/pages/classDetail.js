@@ -388,4 +388,3 @@ const ClassDetailPage = {
         }
     }
 };
-
