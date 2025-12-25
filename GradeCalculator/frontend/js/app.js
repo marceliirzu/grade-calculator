@@ -3,15 +3,12 @@ const App = {
     currentPage: null,
     
     init() {
-        // Check if user has visited before in this session
         const hasVisited = sessionStorage.getItem('gc_visited');
         const isLoggedIn = Storage.isGoogleUser() || Storage.get('gc_local_mode');
         
-        // Only show start page if first visit AND not already logged in
         if (!hasVisited && !isLoggedIn) {
             this.navigate('start');
         } else {
-            // Go directly to landing (classes list)
             this.navigate('landing');
         }
         
@@ -19,13 +16,11 @@ const App = {
     },
     
     bindGlobalEvents() {
-        // Logo click - go to classes list (NOT start page)
         document.querySelector('.header-logo')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.navigate('landing');
         });
         
-        // GPA badge click - go to classes list (NOT start page)
         document.querySelector('.gpa-badge')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.navigate('landing');
@@ -33,12 +28,8 @@ const App = {
     },
     
     async navigate(page, params = {}) {
-        console.log('Navigating to:', page, params);
-        
-        // Update current page
         this.currentPage = page;
         
-        // Show/hide header based on page
         const header = document.querySelector('.app-header');
         if (page === 'start') {
             header?.classList.add('hidden');
@@ -46,7 +37,6 @@ const App = {
             header?.classList.remove('hidden');
         }
         
-        // Route to appropriate page
         switch (page) {
             case 'start':
                 await StartPage.init();
@@ -69,7 +59,6 @@ const App = {
     }
 };
 
-// Start Page - Only shown on first visit
 const StartPage = {
     init() {
         const mainContent = document.getElementById('mainContent');
@@ -83,7 +72,7 @@ const StartPage = {
                         </span>
                     </div>
                     <h1 class="start-title">Track Your Academic Progress</h1>
-                    <p class="start-subtitle">Calculate your GPA, track grades by category, and plan for success with our intelligent grade calculator.</p>
+                    <p class="start-subtitle">Calculate your GPA, track grades by category, and plan for success.</p>
                     
                     <div class="start-features">
                         <div class="feature">
@@ -102,9 +91,7 @@ const StartPage = {
                     
                     <div class="start-actions">
                         <div id="googleSignInDiv" class="google-signin-container"></div>
-                        <div class="divider">
-                            <span>or</span>
-                        </div>
+                        <div class="divider"><span>or</span></div>
                         <button class="btn btn-secondary btn-lg" id="continueWithoutLogin">
                             Continue without signing in
                         </button>
@@ -120,16 +107,13 @@ const StartPage = {
     
     bindEvents() {
         document.getElementById('continueWithoutLogin')?.addEventListener('click', () => {
-            // Set local mode
             Storage.set('gc_local_mode', true);
             sessionStorage.setItem('gc_visited', 'true');
-            // Navigate to classes list
             App.navigate('landing');
         });
     },
     
     initGoogleSignIn() {
-        // Initialize Google Sign-In if available
         if (typeof google !== 'undefined' && google.accounts) {
             google.accounts.id.initialize({
                 client_id: '131903826542-7qnjr23brvee37re47v2dcc93nknr3uf.apps.googleusercontent.com',
@@ -138,12 +122,7 @@ const StartPage = {
             
             google.accounts.id.renderButton(
                 document.getElementById('googleSignInDiv'),
-                { 
-                    theme: 'filled_blue', 
-                    size: 'large',
-                    text: 'signin_with',
-                    width: 280
-                }
+                { theme: 'filled_blue', size: 'large', text: 'signin_with', width: 280 }
             );
         }
     },
@@ -164,22 +143,11 @@ const StartPage = {
     }
 };
 
-// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize modal
     Modal.init();
-    
-    // Load A+ value from storage
     if (typeof CONFIG !== 'undefined' && CONFIG.loadAPlusValue) {
         CONFIG.loadAPlusValue();
     }
-    
-    // Initialize app
     App.init();
-    
-    // Mark body as loaded for fade-in
-    document.body.classList.add('loaded');
-});
-    // Mark body as loaded for fade-in
     document.body.classList.add('loaded');
 });
