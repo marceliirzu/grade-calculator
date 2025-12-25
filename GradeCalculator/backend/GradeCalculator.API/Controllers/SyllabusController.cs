@@ -247,4 +247,3 @@ public class SyllabusParseRequest
 {
     public string Content { get; set; } = string.Empty;
 }
-
