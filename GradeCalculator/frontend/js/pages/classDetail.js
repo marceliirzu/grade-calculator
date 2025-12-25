@@ -75,10 +75,19 @@ const ClassDetailPage = {
     
     calculateClassGrade() {
         const categories = this.classData.categories || [];
-        let totalWeight = 0;
-        let weightedSum = 0;
         
-        categories.forEach(cat => {
+        // Filter categories that have grades and positive weight
+        const gradedCategories = categories.filter(cat => {
+            const catGrade = this.calculateCategoryGrade(cat);
+            return catGrade !== null && cat.weight > 0;
+        });
+        
+        if (gradedCategories.length === 0) return null;
+        
+        let weightedSum = 0;
+        let totalWeight = 0;
+        
+        gradedCategories.forEach(cat => {
             const catGrade = this.calculateCategoryGrade(cat);
             if (catGrade !== null) {
                 weightedSum += catGrade * cat.weight;
@@ -86,21 +95,85 @@ const ClassDetailPage = {
             }
         });
         
-        return totalWeight > 0 ? weightedSum / totalWeight : null;
+        // Handle extra credit categories (weight = 0 or negative, or named "extra credit")
+        const extraCreditCategories = categories.filter(cat => {
+            const name = cat.name.toLowerCase();
+            return name.includes('extra credit') || name.includes('extracredit') || cat.weight === 0;
+        });
+        
+        // Add extra credit bonus on top
+        let extraCreditBonus = 0;
+        extraCreditCategories.forEach(cat => {
+            const items = cat.items || cat.gradeItems || [];
+            items.forEach(item => {
+                if (item.pointsEarned !== null && item.pointsEarned !== undefined) {
+                    // Extra credit adds percentage points directly
+                    if (item.pointsPossible > 0) {
+                        extraCreditBonus += (item.pointsEarned / item.pointsPossible) * (cat.weight || 1);
+                    } else {
+                        extraCreditBonus += item.pointsEarned;
+                    }
+                }
+            });
+        });
+        
+        const baseGrade = totalWeight > 0 ? weightedSum / totalWeight : null;
+        return baseGrade !== null ? baseGrade + extraCreditBonus : null;
     },
     
     calculateCategoryGrade(category) {
         const items = category.items || category.gradeItems || [];
         if (items.length === 0) return null;
         
+        // Only include items with grades
+        const gradedItems = items.filter(item => 
+            item.pointsEarned !== null && item.pointsEarned !== undefined
+        );
+        
+        if (gradedItems.length === 0) return null;
+        
+        // Separate regular items from extra credit items
+        const regularItems = gradedItems.filter(item => item.pointsPossible > 0);
+        const extraCreditItems = gradedItems.filter(item => item.pointsPossible === 0);
+        
+        // Get rules for this category
+        const rules = category.rules || [];
+        
+        // Apply rules to regular items
+        let processedItems = [...regularItems];
+        
+        // Calculate percentages for rule application
+        processedItems = processedItems.map(item => ({
+            ...item,
+            percentage: (item.pointsEarned / item.pointsPossible) * 100
+        }));
+        
+        // Check for drop lowest rule
+        const dropLowestRule = rules.find(r => r.type === 'DropLowest');
+        if (dropLowestRule && dropLowestRule.value > 0 && processedItems.length > dropLowestRule.value) {
+            processedItems.sort((a, b) => a.percentage - b.percentage);
+            processedItems = processedItems.slice(dropLowestRule.value);
+        }
+        
+        // Check for keep highest rule
+        const keepHighestRule = rules.find(r => r.type === 'KeepHighest' || r.type === 'CountHighest');
+        if (keepHighestRule && keepHighestRule.value > 0 && processedItems.length > 0) {
+            processedItems.sort((a, b) => b.percentage - a.percentage);
+            processedItems = processedItems.slice(0, keepHighestRule.value);
+        }
+        
+        // Point-based calculation
         let totalEarned = 0;
         let totalPossible = 0;
         
-        items.forEach(item => {
-            if (item.pointsEarned !== null && item.pointsEarned !== undefined) {
-                totalEarned += item.pointsEarned;
-                totalPossible += item.pointsPossible || 100;
-            }
+        processedItems.forEach(item => {
+            totalEarned += item.pointsEarned;
+            totalPossible += item.pointsPossible;
+        });
+        
+        // Add extra credit points (adds to earned but not possible)
+        extraCreditItems.forEach(item => {
+            totalEarned += item.pointsEarned;
         });
         
         return totalPossible > 0 ? (totalEarned / totalPossible) * 100 : null;
@@ -205,6 +278,7 @@ const ClassDetailPage = {
                 <div class="form-group">
                     <label class="form-label">Weight (%)</label>
                     <input type="number" class="form-input" id="categoryWeight" value="20" min="0" max="100">
+                    <p class="form-help">Use 0% for extra credit categories</p>
                 </div>
             `,
             footer: `
@@ -314,3 +388,4 @@ const ClassDetailPage = {
         }
     }
 };
+
