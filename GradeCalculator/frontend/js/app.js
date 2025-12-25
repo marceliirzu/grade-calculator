@@ -1,59 +1,200 @@
-// Main Application
+// Main App - Navigation and State Management
 const App = {
     currentPage: null,
-    currentParams: {},
     
-    async init() {
-        Modal.init();
-        CONFIG.loadAPlusValue();
-        this.updateAuthUI();
-        this.navigate('landing');
+    init() {
+        // Check if user has visited before in this session
+        const hasVisited = sessionStorage.getItem('gc_visited');
+        const isLoggedIn = Storage.isGoogleUser() || Storage.get('gc_local_mode');
+        
+        // Only show start page if first visit AND not already logged in
+        if (!hasVisited && !isLoggedIn) {
+            this.navigate('start');
+        } else {
+            // Go directly to landing (classes list)
+            this.navigate('landing');
+        }
+        
+        this.bindGlobalEvents();
     },
     
-    updateAuthUI() {
-        const userMenu = document.getElementById('userMenu');
-        const currentAPlusValue = CONFIG.A_PLUS_VALUE;
+    bindGlobalEvents() {
+        // Logo click - go to classes list (NOT start page)
+        document.querySelector('.header-logo')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.navigate('landing');
+        });
         
-        // Just show the A+ toggle, no user profile
-        userMenu.innerHTML = `
-            <div class="aplus-toggle" id="aplusToggle" title="Click to toggle A+ value">
-                <span class="toggle-label">A+</span>
-                <span class="toggle-value">${currentAPlusValue === 4.33 ? '4.33' : '4.0'}</span>
-            </div>
-        `;
-        
-        document.getElementById('aplusToggle')?.addEventListener('click', () => {
-            const newValue = CONFIG.A_PLUS_VALUE === 4.0 ? 4.33 : 4.0;
-            CONFIG.setAPlusValue(newValue);
-            this.updateAuthUI();
-            // Refresh current page to reflect changes
-            this.navigate(this.currentPage, this.currentParams);
+        // GPA badge click - go to classes list (NOT start page)
+        document.querySelector('.gpa-badge')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.navigate('landing');
         });
     },
     
-    navigate(page, params = {}) {
-        this.currentPage = page;
-        this.currentParams = params;
+    async navigate(page, params = {}) {
+        console.log('Navigating to:', page, params);
         
+        // Update current page
+        this.currentPage = page;
+        
+        // Show/hide header based on page
+        const header = document.querySelector('.app-header');
+        if (page === 'start') {
+            header?.classList.add('hidden');
+        } else {
+            header?.classList.remove('hidden');
+        }
+        
+        // Route to appropriate page
         switch (page) {
-            case 'landing':
-                LandingPage.init();
+            case 'start':
+                await StartPage.init();
                 break;
-            case 'classSetup':
-                ClassSetupPage.init(params);
+            case 'landing':
+                await LandingPage.init();
+                break;
+            case 'setup':
+                await ClassSetupPage.init(params);
                 break;
             case 'class':
-                ClassDetailPage.init(params);
+                await ClassDetailPage.init(params);
                 break;
             case 'category':
-                CategoryEditorPage.init(params);
+                await CategoryEditorPage.init(params);
                 break;
             default:
-                LandingPage.init();
+                await LandingPage.init();
         }
     }
 };
 
+// Start Page - Only shown on first visit
+const StartPage = {
+    init() {
+        const mainContent = document.getElementById('mainContent');
+        
+        mainContent.innerHTML = `
+            <div class="start-page">
+                <div class="start-content">
+                    <div class="start-logo">
+                        <span class="logo-text">
+                            <span class="logo-g">G</span><span class="logo-dot">.</span><span class="logo-pa">PA</span>
+                        </span>
+                    </div>
+                    <h1 class="start-title">Track Your Academic Progress</h1>
+                    <p class="start-subtitle">Calculate your GPA, track grades by category, and plan for success with our intelligent grade calculator.</p>
+                    
+                    <div class="start-features">
+                        <div class="feature">
+                            <span class="feature-icon">📊</span>
+                            <span class="feature-text">Real-time GPA calculation</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">🤖</span>
+                            <span class="feature-text">AI-powered syllabus parsing</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">🎯</span>
+                            <span class="feature-text">What-if grade planning</span>
+                        </div>
+                    </div>
+                    
+                    <div class="start-actions">
+                        <div id="googleSignInDiv" class="google-signin-container"></div>
+                        <div class="divider">
+                            <span>or</span>
+                        </div>
+                        <button class="btn btn-secondary btn-lg" id="continueWithoutLogin">
+                            Continue without signing in
+                        </button>
+                        <p class="local-mode-note">Your data will be saved locally on this device</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.bindEvents();
+        this.initGoogleSignIn();
+    },
+    
+    bindEvents() {
+        document.getElementById('continueWithoutLogin')?.addEventListener('click', () => {
+            // Set local mode
+            Storage.set('gc_local_mode', true);
+            sessionStorage.setItem('gc_visited', 'true');
+            // Navigate to classes list
+            App.navigate('landing');
+        });
+    },
+    
+    initGoogleSignIn() {
+        // Initialize Google Sign-In if available
+        if (typeof google !== 'undefined' && google.accounts) {
+            google.accounts.id.initialize({
+                client_id: '131903826542-7qnjr23brvee37re47v2dcc93nknr3uf.apps.googleusercontent.com',
+                callback: this.handleGoogleSignIn.bind(this)
+            });
+            
+            google.accounts.id.renderButton(
+                document.getElementById('googleSignInDiv'),
+                { 
+                    theme: 'filled_blue', 
+                    size: 'large',
+                    text: 'signin_with',
+                    width: 280
+                }
+            );
+        }
+    },
+    
+    async handleGoogleSignIn(response) {
+        try {
+            const result = await AuthService.googleLogin(response.credential);
+            if (result.success) {
+                sessionStorage.setItem('gc_visited', 'true');
+                App.navigate('landing');
+            } else {
+                alert('Sign in failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('Google sign in error:', error);
+            alert('Sign in failed. Please try again.');
+        }
+    }
+};
+
+// Formatters utility
+const Formatters = {
+    percentage(value) {
+        if (value === null || value === undefined) return '—';
+        return `${value.toFixed(1)}%`;
+    },
+    
+    gradeColorClass(letterGrade) {
+        if (!letterGrade || letterGrade === '—') return '';
+        
+        if (letterGrade.startsWith('A')) return 'grade-a';
+        if (letterGrade.startsWith('B')) return 'grade-b';
+        if (letterGrade.startsWith('C')) return 'grade-c';
+        if (letterGrade.startsWith('D')) return 'grade-d';
+        return 'grade-f';
+    }
+};
+
+// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize modal
+    Modal.init();
+    
+    // Load A+ value from storage
+    if (typeof CONFIG !== 'undefined' && CONFIG.loadAPlusValue) {
+        CONFIG.loadAPlusValue();
+    }
+    
+    // Initialize app
     App.init();
+    
+    // Mark body as loaded for fade-in
+    document.body.classList.add('loaded');
 });
