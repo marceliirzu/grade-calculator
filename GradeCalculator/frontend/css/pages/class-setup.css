@@ -1,218 +1,222 @@
-/* Class Setup Page - Dark Ferrari Theme */
+/* Class Setup Page - Aston Martin Theme */
 
 .class-setup-page {
-    max-width: 700px;
+    max-width: 800px;
     margin: 0 auto;
 }
 
-.setup-header {
-    text-align: center;
-    margin-bottom: var(--spacing-8);
-}
-
-.setup-title {
-    font-size: var(--font-size-3xl);
-    font-weight: 700;
-    color: var(--color-white);
-    margin-bottom: var(--spacing-2);
-}
-
-.setup-subtitle {
-    color: var(--color-gray-400);
-    font-size: var(--font-size-lg);
-}
-
-/* Progress Steps */
-.setup-progress {
+/* Setup Steps */
+.setup-steps {
     display: flex;
-    align-items: center;
     justify-content: center;
+    gap: var(--spacing-2);
     margin-bottom: var(--spacing-8);
 }
 
-.progress-step {
+.setup-step {
     display: flex;
-    flex-direction: column;
     align-items: center;
     gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-tertiary);
+}
+
+.setup-step.active {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.setup-step.completed {
+    background: var(--color-success);
+    color: var(--color-white);
 }
 
 .step-number {
-    width: 48px;
-    height: 48px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    font-size: var(--font-size-lg);
-    background-color: var(--color-gray-800);
-    color: var(--color-gray-500);
-    border: 2px solid var(--color-gray-600);
-    transition: all var(--transition-normal);
-}
-
-.step-number.active {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-    color: var(--color-white);
-    border-color: var(--color-primary);
-    box-shadow: var(--shadow-glow);
-}
-
-.step-number.completed {
-    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
-    color: var(--color-black);
-    border-color: var(--color-accent);
-}
-
-.step-label {
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--color-gray-500);
-}
-
-.step-label.active {
-    color: var(--color-primary);
-}
-
-.progress-line {
-    width: 80px;
-    height: 3px;
-    background-color: var(--color-gray-700);
-    margin: 0 var(--spacing-2);
-    margin-bottom: var(--spacing-6);
-    border-radius: var(--radius-full);
-}
-
-.progress-line.completed {
-    background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-primary) 100%);
+    font-weight: 600;
 }
 
 /* Setup Card */
 .setup-card {
-    background-color: var(--color-bg-card);
-    border: 1px solid var(--color-gray-700);
-    border-radius: var(--radius-2xl);
-    padding: var(--spacing-8);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-6);
     margin-bottom: var(--spacing-6);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--color-border);
 }
 
-.setup-card-title {
-    font-size: var(--font-size-2xl);
-    font-weight: 700;
-    color: var(--color-white);
-    margin-bottom: var(--spacing-6);
+.setup-card h2 {
+    margin: 0 0 var(--spacing-4) 0;
+    color: var(--color-text-primary);
 }
 
-/* Categories List */
-.categories-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-4);
+/* Categories Editor */
+.categories-editor {
+    margin-top: var(--spacing-6);
 }
 
 .category-row {
     display: flex;
-    gap: var(--spacing-4);
+    gap: var(--spacing-3);
     align-items: center;
+    margin-bottom: var(--spacing-3);
+    padding: var(--spacing-3);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
 }
 
-.category-row .form-input.category-name {
+.category-row .form-input {
+    margin-bottom: 0;
+}
+
+.category-name-input {
     flex: 2;
 }
 
-.category-row .input-group {
+.category-weight-input {
     flex: 1;
+    max-width: 100px;
 }
 
-.category-row .delete-btn {
-    padding: var(--spacing-3);
-    cursor: pointer;
-    opacity: 0.6;
-    transition: opacity var(--transition-fast);
-    font-size: var(--font-size-xl);
+.weight-suffix {
+    color: var(--color-text-secondary);
+    font-weight: 500;
 }
 
-.category-row .delete-btn:hover {
-    opacity: 1;
+.remove-category-btn {
+    color: var(--color-danger);
 }
 
-/* Total Weight */
+/* Total Weight Display */
 .total-weight {
     display: flex;
-    justify-content: space-between;
-    padding: var(--spacing-4);
-    margin-top: var(--spacing-6);
-    background-color: var(--color-gray-800);
-    border-radius: var(--radius-lg);
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3);
     font-weight: 600;
-    font-size: var(--font-size-lg);
+    color: var(--color-text-primary);
 }
 
-.total-weight.success {
-    background-color: rgba(16, 185, 129, 0.2);
+.total-weight.valid {
     color: var(--color-success);
-    border: 1px solid var(--color-success);
 }
 
-.total-weight.error {
-    background-color: rgba(239, 68, 68, 0.2);
+.total-weight.invalid {
     color: var(--color-danger);
-    border: 1px solid var(--color-danger);
 }
 
-/* Navigation */
-.setup-nav {
+/* Grade Scale Section */
+.grade-scale-section {
+    margin-top: var(--spacing-6);
+}
+
+.grade-scale-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-3);
+}
+
+.grade-scale-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.grade-scale-item .grade-label {
+    min-width: 30px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.grade-scale-item .form-input {
+    width: 70px;
+    text-align: center;
+    padding: var(--spacing-2);
+}
+
+/* Gradebook Preview */
+.gradebook-preview-section {
+    margin-top: var(--spacing-6);
+    padding: var(--spacing-4);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+.gradebook-preview-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-4);
+}
+
+/* Setup Actions */
+.setup-actions {
     display: flex;
     justify-content: space-between;
-    margin-top: var(--spacing-8);
-    padding-top: var(--spacing-6);
-    border-top: 1px solid var(--color-gray-700);
-}
-
-/* Skip Link */
-.skip-link {
-    display: block;
-    text-align: center;
-    color: var(--color-gray-500);
-    font-size: var(--font-size-base);
-    padding: var(--spacing-4);
-}
-
-.skip-link:hover {
-    color: var(--color-gray-300);
-}
-
-/* Basic Info Grid */
-.basic-info-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
     gap: var(--spacing-4);
+    padding-top: var(--spacing-4);
+    border-top: 1px solid var(--color-border);
+}
+
+.setup-actions-right {
+    display: flex;
+    gap: var(--spacing-3);
 }
 
 /* Responsive */
-@media (max-width: 640px) {
-    .setup-card {
-        padding: var(--spacing-5);
+@media (max-width: 768px) {
+    .setup-steps {
+        flex-wrap: wrap;
     }
     
     .category-row {
         flex-wrap: wrap;
     }
     
-    .category-row .form-input.category-name {
+    .category-name-input {
         flex: 1 1 100%;
     }
     
-    .category-row .input-group {
-        flex: 1;
+    .category-weight-input {
+        max-width: none;
     }
     
-    .progress-line {
-        width: 40px;
+    .grade-scale-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
     
-    .basic-info-grid {
+    .setup-actions {
+        flex-direction: column;
+    }
+    
+    .setup-actions-right {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .setup-actions .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .grade-scale-grid {
         grid-template-columns: 1fr;
     }
 }
