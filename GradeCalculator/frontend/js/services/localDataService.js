@@ -216,13 +216,21 @@ const LocalDataService = {
     
     // Add a rule to a category
     addRule(classId, categoryId, ruleData) {
+        console.log('LocalDataService.addRule called:', { classId, categoryId, ruleData });
+        
         const classes = this.getClasses();
         const classIndex = classes.findIndex(c => c.id === classId);
-        if (classIndex === -1) return null;
+        if (classIndex === -1) {
+            console.error('Class not found:', classId);
+            return null;
+        }
         
         const categories = classes[classIndex].categories || [];
         const catIndex = categories.findIndex(c => c.id === categoryId);
-        if (catIndex === -1) return null;
+        if (catIndex === -1) {
+            console.error('Category not found:', categoryId);
+            return null;
+        }
         
         const rules = categories[catIndex].rules || [];
         const newId = rules.length > 0 ? Math.max(...rules.map(r => r.id)) + 1 : 1;
@@ -242,6 +250,10 @@ const LocalDataService = {
         classes[classIndex].updatedAt = new Date().toISOString();
         
         this.saveClasses(classes);
+        
+        console.log('Rule saved. Updated category:', categories[catIndex]);
+        console.log('All classes after save:', this.getClasses());
+        
         return newRule;
     },
     
@@ -321,3 +333,4 @@ const LocalDataService = {
         return this.getClass(newClass.id);
     }
 };
+
