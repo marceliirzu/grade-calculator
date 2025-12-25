@@ -1,57 +1,89 @@
-/* Design System Variables - Ferrari Style */
+/* CSS Variables - Aston Martin Inspired Theme */
 :root {
-    /* Primary Colors - Black & Light Blue */
-    --color-primary: #00B4D8;
-    --color-primary-dark: #0096B4;
-    --color-primary-light: #90E0EF;
-    --color-primary-lighter: #CAF0F8;
+    /* Primary Colors - Deep British Racing Blue */
+    --color-primary: #007A87;
+    --color-primary-rgb: 0, 122, 135;
+    --color-primary-dark: #005F6B;
+    --color-primary-light: #00A3B3;
     
-    /* Accent - Gold */
-    --color-accent: #D4AF37;
-    --color-accent-dark: #B8960C;
-    --color-accent-light: #F4D160;
+    /* Accent Colors - Champagne Gold */
+    --color-accent: #C9A227;
+    --color-accent-rgb: 201, 162, 39;
+    --color-accent-dark: #A68521;
+    --color-accent-light: #E0B93D;
     
-    /* Neutrals - Dark Theme */
-    --color-black: #000000;
-    --color-gray-900: #121212;
-    --color-gray-800: #1E1E1E;
-    --color-gray-700: #2D2D2D;
-    --color-gray-600: #3D3D3D;
-    --color-gray-500: #6B6B6B;
-    --color-gray-400: #9CA3AF;
-    --color-gray-300: #B8B8B8;
-    --color-gray-200: #E5E5E5;
-    --color-gray-100: #F3F4F6;
-    --color-white: #FFFFFF;
+    /* Background Colors - Clean Whites & Light Blues */
+    --color-bg-primary: #FFFFFF;
+    --color-bg-secondary: #F5F8FA;
+    --color-bg-tertiary: #E8EEF2;
+    --color-bg-card: #FFFFFF;
+    --color-bg-elevated: #FFFFFF;
     
-    /* Background */
-    --color-bg: #0A0A0A;
-    --color-bg-card: #1A1A1A;
-    --color-bg-elevated: #252525;
+    /* Dark Mode Elements (for cards, headers) */
+    --color-dark-primary: #0D1B2A;
+    --color-dark-secondary: #1B2838;
+    --color-dark-tertiary: #253445;
     
-    /* Semantic Colors */
-    --color-success: #10B981;
-    --color-warning: #F59E0B;
-    --color-danger: #EF4444;
-    --color-info: #00B4D8;
+    /* Text Colors */
+    --color-text-primary: #0D1B2A;
+    --color-text-secondary: #4A5568;
+    --color-text-tertiary: #718096;
+    --color-text-muted: #A0AEC0;
+    --color-text-inverse: #FFFFFF;
     
     /* Grade Colors */
-    --grade-a: #10B981;
-    --grade-b: #00B4D8;
-    --grade-c: #F59E0B;
-    --grade-d: #F97316;
-    --grade-f: #EF4444;
+    --color-grade-a: #007A87;
+    --color-grade-b: #00A3B3;
+    --color-grade-c: #C9A227;
+    --color-grade-d: #E67E22;
+    --color-grade-f: #C0392B;
+    
+    /* Status Colors */
+    --color-success: #27AE60;
+    --color-warning: #C9A227;
+    --color-danger: #C0392B;
+    --color-info: #007A87;
+    
+    /* Gray Scale */
+    --color-gray-50: #F7FAFC;
+    --color-gray-100: #EDF2F7;
+    --color-gray-200: #E2E8F0;
+    --color-gray-300: #CBD5E0;
+    --color-gray-400: #A0AEC0;
+    --color-gray-500: #718096;
+    --color-gray-600: #4A5568;
+    --color-gray-700: #2D3748;
+    --color-gray-800: #1A202C;
+    --color-gray-900: #0D1B2A;
+    --color-white: #FFFFFF;
+    --color-black: #000000;
+    
+    /* Borders */
+    --color-border: #E2E8F0;
+    --color-border-light: #EDF2F7;
+    --color-border-dark: #CBD5E0;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(13, 27, 42, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(13, 27, 42, 0.1), 0 2px 4px -1px rgba(13, 27, 42, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(13, 27, 42, 0.1), 0 4px 6px -2px rgba(13, 27, 42, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(13, 27, 42, 0.1), 0 10px 10px -5px rgba(13, 27, 42, 0.04);
+    --shadow-gold: 0 4px 14px 0 rgba(201, 162, 39, 0.3);
+    --shadow-card: 0 2px 8px rgba(13, 27, 42, 0.08), 0 1px 2px rgba(13, 27, 42, 0.04);
     
     /* Typography */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-family-display: 'Orbitron', monospace;
+    
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-base: 1rem;
     --font-size-lg: 1.125rem;
     --font-size-xl: 1.25rem;
     --font-size-2xl: 1.5rem;
-    --font-size-3xl: 2rem;
-    --font-size-4xl: 2.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+    --font-size-5xl: 3rem;
     
     /* Spacing */
     --spacing-1: 0.25rem;
@@ -63,32 +95,32 @@
     --spacing-8: 2rem;
     --spacing-10: 2.5rem;
     --spacing-12: 3rem;
+    --spacing-16: 4rem;
     
-    /* Border Radius - More rounded for mobile */
-    --radius-sm: 0.5rem;
-    --radius-md: 0.75rem;
-    --radius-lg: 1rem;
-    --radius-xl: 1.25rem;
+    /* Border Radius */
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
     --radius-2xl: 1.5rem;
     --radius-full: 9999px;
     
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 0 20px rgba(0, 180, 216, 0.3);
-    --shadow-gold: 0 0 15px rgba(212, 175, 55, 0.3);
-    
     /* Transitions */
     --transition-fast: 150ms ease;
-    --transition-normal: 250ms ease;
-    --transition-slow: 350ms ease;
+    --transition-base: 200ms ease;
+    --transition-slow: 300ms ease;
+    
+    /* Z-Index */
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-modal: 1000;
+    --z-tooltip: 1100;
 }
 
-/* Grade color classes */
-.grade-a { color: var(--grade-a) !important; }
-.grade-b { color: var(--grade-b) !important; }
-.grade-c { color: var(--grade-c) !important; }
-.grade-d { color: var(--grade-d) !important; }
-.grade-f { color: var(--grade-f) !important; }
+/* Body defaults */
+body {
+    font-family: var(--font-family);
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    line-height: 1.6;
+}
