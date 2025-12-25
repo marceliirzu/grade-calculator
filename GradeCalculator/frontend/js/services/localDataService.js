@@ -333,4 +333,3 @@ const LocalDataService = {
         return this.getClass(newClass.id);
     }
 };
-
