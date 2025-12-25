@@ -6,6 +6,8 @@ const CategoryEditorPage = {
     async init(params = {}) {
         const { classId, categoryId } = params;
         
+        console.log('CategoryEditorPage.init called with:', { classId, categoryId });
+        
         if (!classId || !categoryId) {
             App.navigate('landing');
             return;
@@ -15,6 +17,7 @@ const CategoryEditorPage = {
             // Use local storage if not Google user
             if (!Storage.isGoogleUser()) {
                 this.classData = LocalDataService.getClass(parseInt(classId));
+                console.log('Loaded class from LocalDataService:', this.classData);
                 if (!this.classData) {
                     throw new Error('Class not found');
                 }
@@ -24,6 +27,9 @@ const CategoryEditorPage = {
             
             const categories = this.classData.categories || [];
             this.categoryData = categories.find(c => c.id === parseInt(categoryId));
+            
+            console.log('Found category:', this.categoryData);
+            console.log('Category rules:', this.categoryData?.rules);
             
             if (!this.categoryData) {
                 alert('Category not found');
@@ -47,29 +53,33 @@ const CategoryEditorPage = {
     calculateCategoryGrade() {
         let items = this.categoryData.items || this.categoryData.gradeItems || [];
         
-        // Only include items with grades
+        // Only include items with grades (not null/undefined)
         const gradedItems = items.filter(item => 
             item.pointsEarned !== null && item.pointsEarned !== undefined
         );
         
         if (gradedItems.length === 0) return null;
         
+        // Separate extra credit items (pointsPossible = 0) from regular items
+        const regularItems = gradedItems.filter(item => item.pointsPossible > 0);
+        const extraCreditItems = gradedItems.filter(item => item.pointsPossible === 0);
+        
         // Get rules
         const rules = this.categoryData.rules || [];
         
-        // Apply rules
-        let processedItems = [...gradedItems];
+        // Apply rules only to regular items (not extra credit)
+        let processedItems = [...regularItems];
         
-        // Calculate percentages for sorting
+        // Calculate percentages for sorting/rules
         processedItems = processedItems.map(item => ({
             ...item,
-            percentage: item.pointsPossible > 0 ? (item.pointsEarned / item.pointsPossible) * 100 : 0
+            percentage: (item.pointsEarned / item.pointsPossible) * 100
         }));
         
         // Check for weighted distribution rule
         const weightedRule = rules.find(r => r.type === 'WeightedDistribution' || r.type === 'WeightByScore');
         
-        if (weightedRule && weightedRule.weightDistribution) {
+        if (weightedRule && weightedRule.weightDistribution && processedItems.length > 0) {
             // Sort by percentage descending
             processedItems.sort((a, b) => b.percentage - a.percentage);
             
@@ -87,33 +97,41 @@ const CategoryEditorPage = {
                 totalWeight += weight;
             });
             
-            return totalWeight > 0 ? weightedSum / totalWeight : null;
+            // Add extra credit on top
+            let extraCreditBonus = 0;
+            extraCreditItems.forEach(item => {
+                extraCreditBonus += item.pointsEarned;
+            });
+            
+            return totalWeight > 0 ? (weightedSum / totalWeight) + extraCreditBonus : null;
         }
         
         // Check for drop lowest rule
         const dropLowestRule = rules.find(r => r.type === 'DropLowest');
-        if (dropLowestRule && dropLowestRule.value > 0) {
+        if (dropLowestRule && dropLowestRule.value > 0 && processedItems.length > dropLowestRule.value) {
             processedItems.sort((a, b) => a.percentage - b.percentage);
             processedItems = processedItems.slice(dropLowestRule.value);
         }
         
         // Check for keep highest rule
         const keepHighestRule = rules.find(r => r.type === 'KeepHighest' || r.type === 'CountHighest');
-        if (keepHighestRule && keepHighestRule.value > 0) {
+        if (keepHighestRule && keepHighestRule.value > 0 && processedItems.length > 0) {
             processedItems.sort((a, b) => b.percentage - a.percentage);
             processedItems = processedItems.slice(0, keepHighestRule.value);
         }
         
-        // Standard calculation
+        // Point-based calculation for regular items
         let totalEarned = 0;
         let totalPossible = 0;
         
         processedItems.forEach(item => {
             totalEarned += item.pointsEarned;
-            // Extra credit: don't add to possible if pointsPossible is 0
-            if (item.pointsPossible > 0) {
-                totalPossible += item.pointsPossible;
-            }
+            totalPossible += item.pointsPossible;
+        });
+        
+        // Add extra credit points to earned (but not to possible)
+        extraCreditItems.forEach(item => {
+            totalEarned += item.pointsEarned;
         });
         
         return totalPossible > 0 ? (totalEarned / totalPossible) * 100 : null;
@@ -542,11 +560,14 @@ const CategoryEditorPage = {
                 } else {
                     const value = parseInt(document.getElementById('ruleValue').value);
                     
+                    console.log('Adding rule:', { type, value, classId: this.classData.id, categoryId: this.categoryData.id });
+                    
                     if (!Storage.isGoogleUser()) {
-                        LocalDataService.addRule(this.classData.id, this.categoryData.id, {
+                        const result = LocalDataService.addRule(this.classData.id, this.categoryData.id, {
                             type: type,
                             value: value
                         });
+                        console.log('Rule added to LocalDataService:', result);
                     } else {
                         await CategoryService.addRule(this.categoryData.id, {
                             categoryId: this.categoryData.id,
