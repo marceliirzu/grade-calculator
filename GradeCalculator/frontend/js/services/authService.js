@@ -106,3 +106,4 @@ const AuthService = {
         window.location.href = authUrl;
     }
 };
+
