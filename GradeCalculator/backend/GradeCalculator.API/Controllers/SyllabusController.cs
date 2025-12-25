@@ -145,21 +145,44 @@ Return a JSON object with this exact structure:
     ]
 }
 
-Rules:
-1. Group assignments into logical categories (Assignments, Quizzes, Exams, Labs, Homework, Projects, Participation, etc.)
-2. If categories are already specified in the gradebook, use those
-3. If no categories exist, infer them from assignment names (e.g., 'Quiz 1' goes in 'Quizzes', 'Homework 3' goes in 'Homework')
-4. Extract points earned and points possible for each item
-5. If only percentages are shown, convert to points (use 100 as points possible, calculate points earned)
-6. If an assignment has no grade yet (not submitted/graded, shows '-' or blank), set pointsEarned to null
-7. If weights are shown, include them. Otherwise estimate based on typical course structures:
-   - Exams/Midterms/Finals: 20-40% each
-   - Quizzes: 10-20% total
-   - Homework/Assignments: 20-30% total
-   - Labs: 10-20% total
+CRITICAL RULES FOR EXTRA CREDIT:
+1. ANY assignment with 'extra credit', 'EC', 'XC', or 'bonus' in the name is EXTRA CREDIT
+2. Extra credit items MUST have pointsPossible set to 0 (zero)
+3. Extra credit items should be placed in their natural category (e.g., 'Quiz Extra Credit' goes in 'Quizzes')
+4. Do NOT create a separate 'Extra Credit' category - put extra credit items in the category they belong to
+5. If an extra credit item has no clear category, put it in 'Assignments'
+
+RULES FOR UNGRADED ITEMS:
+1. If an assignment shows 'Not graded', '-', 'N/A', blank, or no score: set pointsEarned to null
+2. These represent future/ungraded assignments the student can use for 'what-if' calculations
+
+CATEGORY RULES:
+1. Group assignments into logical categories based on their names:
+   - 'Quiz', 'Test' → Quizzes
+   - 'Exam', 'Midterm', 'Final' → Exams  
+   - 'Homework', 'HW', 'Assignment' → Homework
+   - 'Lab' → Labs
+   - 'Project' → Projects
+   - 'Participation', 'Attendance' → Participation
+2. Use existing category names if the gradebook specifies them
+3. Keep category names short and simple
+
+WEIGHT RULES:
+1. If weights are shown in the gradebook, use those exact weights
+2. If no weights shown, estimate based on typical distributions:
+   - Exams/Finals: 30-50%
+   - Quizzes: 10-20%
+   - Homework/Assignments: 20-30%
+   - Labs: 10-20%
    - Participation: 5-10%
    - Projects: 15-25%
-8. Weights should sum to 100
+3. Weights must sum to 100%
+
+POINTS RULES:
+1. Extract exact point values (e.g., '85/100' → pointsEarned: 85, pointsPossible: 100)
+2. If only percentage shown (e.g., '85%'), convert to points out of 100
+3. Scores above 100% are valid (extra credit on regular assignments)
+4. For items like '26/25', this is NOT extra credit - it's a regular item where student earned bonus points
 
 Parse this gradebook:
 " + request.Content;
@@ -224,3 +247,4 @@ public class SyllabusParseRequest
 {
     public string Content { get; set; } = string.Empty;
 }
+
