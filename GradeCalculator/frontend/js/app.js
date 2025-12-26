@@ -1,8 +1,12 @@
-// Main App - Navigation and State Management
+// Main Application
 const App = {
     currentPage: null,
     
-    init() {
+    async init() {
+        Modal.init();
+        CONFIG.loadAPlusValue();
+        
+        // Check if first visit this session
         const hasVisited = sessionStorage.getItem('gc_visited');
         const isLoggedIn = Storage.isGoogleUser() || Storage.get('gc_local_mode');
         
@@ -16,21 +20,25 @@ const App = {
     },
     
     bindGlobalEvents() {
-        document.querySelector('.header-logo')?.addEventListener('click', (e) => {
+        // Logo click - always go to landing (not start)
+        document.querySelector('.header-logo, .logo')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.navigate('landing');
         });
         
+        // GPA badge click - always go to landing
         document.querySelector('.gpa-badge')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.navigate('landing');
         });
     },
     
-    async navigate(page, params = {}) {
+    navigate(page, params = {}) {
         this.currentPage = page;
+        this.currentParams = params;
         
-        const header = document.querySelector('.app-header');
+        // Hide header on start page
+        const header = document.querySelector('.header, .app-header');
         if (page === 'start') {
             header?.classList.add('hidden');
         } else {
@@ -39,63 +47,48 @@ const App = {
         
         switch (page) {
             case 'start':
-                await StartPage.init();
+                StartPage.init();
                 break;
             case 'landing':
-                await LandingPage.init();
+                LandingPage.init();
                 break;
+            case 'classSetup':
             case 'setup':
-                await ClassSetupPage.init(params);
+                ClassSetupPage.init(params);
                 break;
             case 'class':
-                await ClassDetailPage.init(params);
+                ClassDetailPage.init(params);
                 break;
             case 'category':
-                await CategoryEditorPage.init(params);
+                CategoryEditorPage.init(params);
                 break;
             default:
-                await LandingPage.init();
+                LandingPage.init();
         }
     }
 };
 
+// Start Page
 const StartPage = {
     init() {
         const mainContent = document.getElementById('mainContent');
         
         mainContent.innerHTML = `
-            <div class="start-page">
-                <div class="start-content">
-                    <div class="start-logo">
-                        <span class="logo-text">
-                            <span class="logo-g">G</span><span class="logo-dot">.</span><span class="logo-pa">PA</span>
-                        </span>
+            <div class="start-page" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0D1B2A 0%, #1f2937 100%);">
+                <div style="text-align: center; max-width: 400px; padding: 2rem;">
+                    <div style="font-size: 4rem; font-weight: 700; color: white; margin-bottom: 2rem;">
+                        G<span style="color: #C9A227;">.</span>PA
                     </div>
-                    <h1 class="start-title">Track Your Academic Progress</h1>
-                    <p class="start-subtitle">Calculate your GPA, track grades by category, and plan for success.</p>
+                    <h1 style="font-size: 1.5rem; color: white; margin-bottom: 1rem;">Track Your Academic Progress</h1>
+                    <p style="color: #9ca3af; margin-bottom: 2rem;">Calculate your GPA, track grades by category, and plan for success.</p>
                     
-                    <div class="start-features">
-                        <div class="feature">
-                            <span class="feature-icon">📊</span>
-                            <span class="feature-text">Real-time GPA calculation</span>
-                        </div>
-                        <div class="feature">
-                            <span class="feature-icon">🤖</span>
-                            <span class="feature-text">AI-powered syllabus parsing</span>
-                        </div>
-                        <div class="feature">
-                            <span class="feature-icon">🎯</span>
-                            <span class="feature-text">What-if grade planning</span>
-                        </div>
-                    </div>
-                    
-                    <div class="start-actions">
-                        <div id="googleSignInDiv" class="google-signin-container"></div>
-                        <div class="divider"><span>or</span></div>
-                        <button class="btn btn-secondary btn-lg" id="continueWithoutLogin">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div id="googleSignInDiv"></div>
+                        <div style="color: #6b7280;">or</div>
+                        <button class="btn btn-secondary" id="continueWithoutLogin" style="padding: 0.75rem 1.5rem;">
                             Continue without signing in
                         </button>
-                        <p class="local-mode-note">Your data will be saved locally on this device</p>
+                        <p style="font-size: 0.875rem; color: #6b7280;">Your data will be saved locally</p>
                     </div>
                 </div>
             </div>
@@ -119,7 +112,6 @@ const StartPage = {
                 client_id: '131903826542-7qnjr23brvee37re47v2dcc93nknr3uf.apps.googleusercontent.com',
                 callback: this.handleGoogleSignIn.bind(this)
             });
-            
             google.accounts.id.renderButton(
                 document.getElementById('googleSignInDiv'),
                 { theme: 'filled_blue', size: 'large', text: 'signin_with', width: 280 }
@@ -133,21 +125,14 @@ const StartPage = {
             if (result.success) {
                 sessionStorage.setItem('gc_visited', 'true');
                 App.navigate('landing');
-            } else {
-                alert('Sign in failed. Please try again.');
             }
         } catch (error) {
             console.error('Google sign in error:', error);
-            alert('Sign in failed. Please try again.');
         }
     }
 };
 
+// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    Modal.init();
-    if (typeof CONFIG !== 'undefined' && CONFIG.loadAPlusValue) {
-        CONFIG.loadAPlusValue();
-    }
     App.init();
-    document.body.classList.add('loaded');
 });
