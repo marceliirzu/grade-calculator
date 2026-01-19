@@ -68,27 +68,51 @@ const App = {
     }
 };
 
-// Start Page
+// Start Page with animated G.PA logo
 const StartPage = {
     init() {
         const mainContent = document.getElementById('mainContent');
         
         mainContent.innerHTML = `
-            <div class="start-page" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0D1B2A 0%, #1f2937 100%);">
-                <div style="text-align: center; max-width: 400px; padding: 2rem;">
-                    <div style="font-size: 4rem; font-weight: 700; color: white; margin-bottom: 2rem;">
-                        G<span style="color: #C9A227;">.</span>PA
+            <div class="start-page">
+                <div class="start-content">
+                    <!-- Animated G.PA Logo -->
+                    <div class="hero-logo-animation" id="heroLogo">
+                        <span class="digit" id="heroDigit1">0</span>
+                        <span class="dot">.</span>
+                        <span class="digit" id="heroDigit2">0</span>
+                        <span class="digit" id="heroDigit3">0</span>
                     </div>
-                    <h1 style="font-size: 1.5rem; color: white; margin-bottom: 1rem;">Track Your Academic Progress</h1>
-                    <p style="color: #9ca3af; margin-bottom: 2rem;">Calculate your GPA, track grades by category, and plan for success.</p>
                     
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <h1 class="start-title">The Smart GPA Calculator</h1>
+                    <p class="start-subtitle">Track your grades, calculate your GPA, and plan for academic success.</p>
+                    
+                    <div class="start-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✨</span>
+                            <span>AI extracts grading info from your syllabus</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">📊</span>
+                            <span>Track grades by category with weighted calculations</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🎯</span>
+                            <span>What-if mode to plan your grades</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">⚡</span>
+                            <span>Special rules: drop lowest, weight by score</span>
+                        </div>
+                    </div>
+                    
+                    <div class="start-actions">
                         <div id="googleSignInDiv"></div>
-                        <div style="color: #6b7280;">or</div>
-                        <button class="btn btn-secondary" id="continueWithoutLogin" style="padding: 0.75rem 1.5rem;">
+                        <span class="start-divider">or</span>
+                        <button class="btn btn-secondary btn-lg" id="continueWithoutLogin">
                             Continue without signing in
                         </button>
-                        <p style="font-size: 0.875rem; color: #6b7280;">Your data will be saved locally</p>
+                        <p class="start-note">Your data will be saved locally on this device</p>
                     </div>
                 </div>
             </div>
@@ -96,6 +120,39 @@ const StartPage = {
         
         this.bindEvents();
         this.initGoogleSignIn();
+        this.animateHeroLogo();
+        
+        // Re-run animation when clicking the logo
+        document.getElementById('heroLogo')?.addEventListener('click', () => {
+            this.animateHeroLogo();
+        });
+    },
+    
+    animateHeroLogo() {
+        const digit1 = document.getElementById('heroDigit1');
+        const digit2 = document.getElementById('heroDigit2');
+        const digit3 = document.getElementById('heroDigit3');
+        
+        if (!digit1 || !digit2 || !digit3) return;
+        
+        const chars = '0123456789';
+        let frame = 0;
+        const totalFrames = 25;
+        
+        const interval = setInterval(() => {
+            frame++;
+            
+            if (frame < totalFrames) {
+                digit1.textContent = chars[Math.floor(Math.random() * 10)];
+                digit2.textContent = chars[Math.floor(Math.random() * 10)];
+                digit3.textContent = chars[Math.floor(Math.random() * 10)];
+            } else {
+                clearInterval(interval);
+                digit1.textContent = 'G';
+                digit2.textContent = 'P';
+                digit3.textContent = 'A';
+            }
+        }, 50);
     },
     
     bindEvents() {
