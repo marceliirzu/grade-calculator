@@ -1,4 +1,4 @@
-/* Main Styles - Aston Martin Theme */
+/* Main Styles - Dark Theme */
 
 /* Reset */
 *, *::before, *::after {
@@ -15,21 +15,21 @@ html {
 
 body {
     font-family: var(--font-family);
-    background: linear-gradient(180deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%);
+    background: var(--color-bg-primary);
     color: var(--color-text-primary);
     min-height: 100vh;
     line-height: 1.6;
 }
 
 /* App Container */
-.app-container {
+#app {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
-/* Header - Dark Navy */
-.app-header {
+/* Header - Dark with gold accent */
+.header {
     background: linear-gradient(135deg, var(--color-dark-primary) 0%, var(--color-dark-secondary) 100%);
     padding: var(--spacing-3) var(--spacing-6);
     display: flex;
@@ -42,49 +42,54 @@ body {
     border-bottom: 2px solid var(--color-accent);
 }
 
-.header-left {
+.header.hidden {
+    display: none;
+}
+
+.header-content {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: var(--spacing-3);
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .header-logo {
     display: flex;
     align-items: center;
-    gap: var(--spacing-3);
+    gap: var(--spacing-2);
+    cursor: pointer;
     text-decoration: none;
 }
 
-.header-logo-animation {
-    font-family: var(--font-family-display);
-    font-size: 1.4rem;
+.header-brand {
+    font-family: var(--font-family);
+    font-size: 1.3rem;
     font-weight: 700;
-    letter-spacing: 1px;
-    display: flex;
+    letter-spacing: -0.5px;
 }
 
-.header-logo-animation .logo-letter {
+.header-brand .brand-calc {
+    color: var(--color-primary);
+}
+
+.header-brand .brand-your {
     color: var(--color-white);
 }
 
-.header-logo-animation .logo-dot {
+.header-brand .brand-gpa {
     color: var(--color-accent);
 }
 
-.header-tagline {
-    color: var(--color-gray-400);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    letter-spacing: 0.5px;
-}
-
-.header-right {
+/* User Menu */
+.user-menu {
     display: flex;
     align-items: center;
-    gap: var(--spacing-4);
+    gap: var(--spacing-3);
 }
 
-/* GPA Badge - Gold Accent */
+/* GPA Badge */
 .gpa-badge {
     display: flex;
     align-items: center;
@@ -93,8 +98,9 @@ body {
     padding: var(--spacing-2) var(--spacing-4);
     border-radius: var(--radius-full);
     font-weight: 700;
-    color: var(--color-dark-primary);
+    color: var(--color-black);
     box-shadow: var(--shadow-gold);
+    cursor: pointer;
 }
 
 .gpa-badge .gpa-label {
@@ -119,21 +125,21 @@ body {
 h1 {
     font-size: var(--font-size-3xl);
     font-weight: 700;
-    color: var(--color-dark-primary);
+    color: var(--color-text-primary);
     margin-bottom: var(--spacing-2);
 }
 
 h2 {
     font-size: var(--font-size-2xl);
     font-weight: 600;
-    color: var(--color-dark-primary);
+    color: var(--color-text-primary);
     margin-bottom: var(--spacing-4);
 }
 
 h3 {
     font-size: var(--font-size-xl);
     font-weight: 600;
-    color: var(--color-dark-primary);
+    color: var(--color-text-primary);
 }
 
 /* Links */
@@ -168,7 +174,7 @@ a:hover {
 }
 
 .breadcrumb-separator {
-    color: var(--color-gray-400);
+    color: var(--color-gray-500);
 }
 
 .breadcrumb-current {
@@ -190,9 +196,20 @@ a:hover {
     color: var(--color-text-secondary);
 }
 
+.empty-state .empty-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-4);
+}
+
+.empty-state h2 {
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-2);
+}
+
 .empty-state p {
     font-size: var(--font-size-lg);
-    margin-bottom: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+    color: var(--color-text-secondary);
 }
 
 /* Utility Classes */
@@ -216,9 +233,26 @@ a:hover {
 .grade-d { color: var(--color-grade-d); }
 .grade-f { color: var(--color-grade-f); }
 
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-6);
+}
+
+.page-header h1 {
+    margin-bottom: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-3);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
-    .app-header {
+    .header {
         padding: var(--spacing-3) var(--spacing-4);
     }
     
@@ -226,12 +260,14 @@ a:hover {
         padding: var(--spacing-4);
     }
     
-    .header-tagline {
-        display: none;
-    }
-    
     h1 {
         font-size: var(--font-size-2xl);
+    }
+    
+    .page-header {
+        flex-direction: column;
+        gap: var(--spacing-4);
+        align-items: flex-start;
     }
 }
 
@@ -242,11 +278,11 @@ a:hover {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--color-bg-tertiary);
+    background: var(--color-bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--color-gray-400);
+    background: var(--color-gray-600);
     border-radius: var(--radius-full);
 }
 
