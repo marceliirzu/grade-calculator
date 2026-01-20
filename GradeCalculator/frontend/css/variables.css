@@ -1,45 +1,60 @@
 :root {
-    /* Colors - Aston Martin Theme */
-    --color-primary: #007A87;
-    --color-primary-hover: #005F6B;
+    /* Colors - Dark Ferrari/Aston Martin Theme */
+    --color-primary: #00B4D8;
+    --color-primary-dark: #0096B4;
+    --color-primary-hover: #0096B4;
     --color-primary-light: #E0F4F5;
     
     /* Gold Accent */
-    --color-accent: #C9A227;
-    --color-accent-hover: #A68521;
+    --color-accent: #D4AF37;
+    --color-accent-dark: #B8962E;
+    --color-accent-hover: #B8962E;
     
-    --color-success: #10b981;
-    --color-success-light: #d1fae5;
+    /* Dark backgrounds */
+    --color-bg-primary: #0A0A0A;
+    --color-bg-secondary: #121212;
+    --color-bg-tertiary: #1A1A1A;
+    --color-dark-primary: #0D1B2A;
+    --color-dark-secondary: #1B2838;
     
-    --color-warning: #C9A227;
-    --color-warning-light: #fef3c7;
+    /* Text colors */
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #B0B0B0;
+    --color-text-muted: #6B7280;
     
-    --color-danger: #ef4444;
-    --color-danger-light: #fee2e2;
+    /* Status colors */
+    --color-success: #10B981;
+    --color-success-light: #D1FAE5;
+    --color-warning: #F59E0B;
+    --color-warning-light: #FEF3C7;
+    --color-danger: #EF4444;
+    --color-danger-light: #FEE2E2;
     
-    --color-gray-50: #f9fafb;
-    --color-gray-100: #f3f4f6;
-    --color-gray-200: #e5e7eb;
-    --color-gray-300: #d1d5db;
-    --color-gray-400: #9ca3af;
-    --color-gray-500: #6b7280;
-    --color-gray-600: #4b5563;
+    /* Grays */
+    --color-gray-50: #F9FAFB;
+    --color-gray-100: #F3F4F6;
+    --color-gray-200: #E5E7EB;
+    --color-gray-300: #D1D5DB;
+    --color-gray-400: #9CA3AF;
+    --color-gray-500: #6B7280;
+    --color-gray-600: #4B5563;
     --color-gray-700: #374151;
-    --color-gray-800: #1f2937;
-    --color-gray-900: #0D1B2A;
+    --color-gray-800: #1F2937;
+    --color-gray-900: #111827;
     
-    --color-white: #ffffff;
+    --color-white: #FFFFFF;
     --color-black: #000000;
     
     /* Grade Colors */
-    --grade-a: #007A87;
-    --grade-b: #00A3B3;
-    --grade-c: #C9A227;
-    --grade-d: #f97316;
-    --grade-f: #ef4444;
+    --color-grade-a: #10B981;
+    --color-grade-b: #00B4D8;
+    --color-grade-c: #D4AF37;
+    --color-grade-d: #F97316;
+    --color-grade-f: #EF4444;
     
     /* Typography */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-family-display: 'Orbitron', monospace;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-base: 1rem;
@@ -47,6 +62,7 @@
     --font-size-xl: 1.25rem;
     --font-size-2xl: 1.5rem;
     --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
     
     /* Spacing */
     --spacing-1: 0.25rem;
@@ -68,14 +84,20 @@
     --radius-full: 9999px;
     
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-    --shadow-gold: 0 4px 14px 0 rgba(201, 162, 39, 0.3);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    --shadow-gold: 0 4px 14px 0 rgba(212, 175, 55, 0.4);
     
     /* Transitions */
     --transition-fast: 150ms ease;
     --transition-normal: 200ms ease;
     --transition-slow: 300ms ease;
+    
+    /* Z-Index */
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-modal: 300;
+    --z-tooltip: 400;
 }
