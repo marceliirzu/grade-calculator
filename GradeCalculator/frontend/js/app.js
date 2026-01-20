@@ -21,13 +21,7 @@ const App = {
     
     bindGlobalEvents() {
         // Logo click - always go to landing (not start)
-        document.querySelector('.header-logo, .logo')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.navigate('landing');
-        });
-        
-        // GPA badge click - always go to landing
-        document.querySelector('.gpa-badge')?.addEventListener('click', (e) => {
+        document.getElementById('headerLogo')?.addEventListener('click', (e) => {
             e.preventDefault();
             this.navigate('landing');
         });
@@ -38,7 +32,7 @@ const App = {
         this.currentParams = params;
         
         // Hide header on start page
-        const header = document.querySelector('.header, .app-header');
+        const header = document.querySelector('.header');
         if (page === 'start') {
             header?.classList.add('hidden');
         } else {
@@ -120,7 +114,9 @@ const StartPage = {
         
         this.bindEvents();
         this.initGoogleSignIn();
-        this.animateHeroLogo();
+        
+        // Run animation after a short delay
+        setTimeout(() => this.animateHeroLogo(), 200);
         
         // Re-run animation when clicking the logo
         document.getElementById('heroLogo')?.addEventListener('click', () => {
