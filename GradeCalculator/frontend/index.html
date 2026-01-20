@@ -26,36 +26,11 @@
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         body { opacity: 0; transition: opacity 0.3s; }
         body.loaded { opacity: 1; }
-        
-        /* Header Logo - CalcYourGPA branding */
-        .header-logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-2);
-            cursor: pointer;
-            text-decoration: none;
-        }
-        
-        .header-brand {
-            font-family: 'Inter', sans-serif;
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--color-white);
-            letter-spacing: -0.5px;
-        }
-        
-        .header-brand .brand-calc {
-            color: var(--color-primary);
-        }
-        
-        .header-brand .brand-gpa {
-            color: var(--color-accent);
-        }
         
         /* Hero G.PA Animation for Start Page */
         .hero-logo-animation {
@@ -215,50 +190,6 @@
             font-weight: 700;
         }
         
-        /* Gradebook Preview */
-        .gradebook-preview {
-            background: var(--color-gray-800);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-4);
-            margin-top: var(--spacing-4);
-        }
-        
-        .gradebook-preview h4 {
-            margin-bottom: var(--spacing-3);
-            color: var(--color-accent);
-        }
-        
-        .preview-category {
-            margin-bottom: var(--spacing-3);
-            padding: var(--spacing-3);
-            background: var(--color-gray-900);
-            border-radius: var(--radius-md);
-        }
-        
-        .preview-category-header {
-            margin-bottom: var(--spacing-2);
-            color: var(--color-gray-200);
-        }
-        
-        .preview-items {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            font-size: var(--font-size-sm);
-            color: var(--color-gray-400);
-        }
-        
-        .preview-items li {
-            padding: 4px 0;
-        }
-        
-        .preview-note {
-            font-size: var(--font-size-sm);
-            color: var(--color-gray-500);
-            margin-top: var(--spacing-3);
-            font-style: italic;
-        }
-        
         /* Modal improvements */
         .modal-description {
             color: var(--color-gray-300);
@@ -279,8 +210,48 @@
             color: var(--color-accent);
         }
         
-        .paste-options {
-            margin-bottom: var(--spacing-3);
+        .add-class-options {
+            padding: var(--spacing-2) 0;
+        }
+        
+        .option-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-3);
+        }
+        
+        .btn-option {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: var(--spacing-4);
+            background: var(--color-gray-800);
+            border: 1px solid var(--color-gray-700);
+            border-radius: var(--radius-lg);
+            text-align: left;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-option:hover {
+            background: var(--color-gray-700);
+            border-color: var(--color-primary);
+        }
+        
+        .option-icon {
+            font-size: 1.5rem;
+            margin-bottom: var(--spacing-2);
+        }
+        
+        .option-title {
+            font-weight: 600;
+            color: var(--color-white);
+            margin-bottom: var(--spacing-1);
+        }
+        
+        .option-desc {
+            font-size: var(--font-size-sm);
+            color: var(--color-gray-400);
         }
     </style>
 </head>
@@ -291,11 +262,11 @@
             <div class="header-content">
                 <a href="#" class="header-logo" id="headerLogo" onclick="App.navigate('landing'); return false;">
                     <span class="header-brand">
-                        <span class="brand-calc">Calc</span>Your<span class="brand-gpa">GPA</span>
+                        <span class="brand-calc">Calc</span><span class="brand-your">Your</span><span class="brand-gpa">GPA</span>
                     </span>
                 </a>
                 <div class="user-menu" id="userMenu">
-                    <!-- A+ Toggle loads here -->
+                    <!-- A+ Toggle and user info loads here -->
                 </div>
             </div>
         </header>
