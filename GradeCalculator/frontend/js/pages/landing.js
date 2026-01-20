@@ -79,11 +79,37 @@ const LandingPage = {
         const regularItems = gradedItems.filter(item => item.pointsPossible > 0);
         const extraCreditItems = gradedItems.filter(item => item.pointsPossible === 0);
         
+        // Get rules
+        const rules = category.rules || [];
+        
+        // Apply rules to regular items
+        let processedItems = [...regularItems];
+        
+        // Calculate percentages for rule application
+        processedItems = processedItems.map(item => ({
+            ...item,
+            percentage: (item.pointsEarned / item.pointsPossible) * 100
+        }));
+        
+        // Check for drop lowest rule
+        const dropLowestRule = rules.find(r => r.type === 'DropLowest');
+        if (dropLowestRule && dropLowestRule.value > 0 && processedItems.length > dropLowestRule.value) {
+            processedItems.sort((a, b) => a.percentage - b.percentage);
+            processedItems = processedItems.slice(dropLowestRule.value);
+        }
+        
+        // Check for keep highest rule
+        const keepHighestRule = rules.find(r => r.type === 'KeepHighest' || r.type === 'CountHighest');
+        if (keepHighestRule && keepHighestRule.value > 0 && processedItems.length > 0) {
+            processedItems.sort((a, b) => b.percentage - a.percentage);
+            processedItems = processedItems.slice(0, keepHighestRule.value);
+        }
+        
         // Point-based calculation
         let totalEarned = 0;
         let totalPossible = 0;
         
-        regularItems.forEach(item => {
+        processedItems.forEach(item => {
             totalEarned += item.pointsEarned;
             totalPossible += item.pointsPossible;
         });
