@@ -107,6 +107,13 @@ public class ParsedCategory
 {
     public string Name { get; set; } = string.Empty;
     public decimal Weight { get; set; }
+    public List<ParsedRule> Rules { get; set; } = new();
+}
+
+public class ParsedRule
+{
+    public string Type { get; set; } = string.Empty;
+    public int Value { get; set; }
 }
 
 public class ParsedGradeScale
