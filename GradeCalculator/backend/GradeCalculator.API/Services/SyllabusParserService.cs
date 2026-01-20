@@ -17,26 +17,44 @@ public class SyllabusParserService : ISyllabusParserService
     
     public async Task<SyllabusParseResponse> ParseSyllabusAsync(string syllabusText)
     {
-        var prompt = @"You are analyzing a course syllabus to extract grading information. 
+        var prompt = @"You are analyzing a course syllabus to extract grading information.
 
 IMPORTANT: Syllabi may show grading in different formats:
 - Percentages (e.g., ""Homework: 25%"")
 - Points (e.g., ""Homework: 200 points, Exams: 300 points"")
 - Mixed formats
 
-YOUR JOB: Always convert everything to PERCENTAGE WEIGHTS that add up to 100%.
+YOUR JOB: Extract grading info and convert everything to PERCENTAGE WEIGHTS that add up to 100%.
 
 For POINT-BASED syllabi:
 - Calculate the total points
 - Convert each category to a percentage of the total
 - Example: If Homework=200pts, Exams=300pts, Total=500pts -> Homework=40%, Exams=60%
 
-Extract the following and return as JSON:
+ALSO EXTRACT GRADING RULES like:
+- ""drop lowest quiz"" -> DropLowest rule for Quizzes category
+- ""drop 2 lowest homework scores"" -> DropLowest with value 2 for Homework
+- ""only top 5 quiz scores count"" -> KeepHighest with value 5 for Quizzes
+- ""lowest exam is replaced by final"" -> DropLowest with value 1 for Exams
+
+EXTRA CREDIT HANDLING:
+- Extra credit should NOT be a separate category
+- Extra credit items should be added to their natural category (e.g., ""Quiz EC"" goes in Quizzes)
+- Extra credit items have pointsPossible = 0 (they add to earned but not to the total possible)
+- If category is unclear, put extra credit in ""Assignments""
+
+Extract and return as JSON:
 {
-    ""className"": ""The course name/title (e.g., 'MATH 101 - Calculus I')"",
+    ""className"": ""COURSE CODE - Course Title"",
     ""creditHours"": 3,
     ""categories"": [
-        { ""name"": ""Category Name"", ""weight"": 25 }
+        { 
+            ""name"": ""Category Name"", 
+            ""weight"": 25,
+            ""rules"": [
+                { ""type"": ""DropLowest"", ""value"": 1 }
+            ]
+        }
     ],
     ""gradeScale"": {
         ""aPlus"": 97, ""a"": 93, ""aMinus"": 90,
@@ -47,12 +65,14 @@ Extract the following and return as JSON:
 }
 
 RULES:
-1. Category weights MUST add up to exactly 100
+1. Category weights MUST add up to exactly 100 (excluding extra credit categories with 0 weight)
 2. If points are given, convert to percentages
-3. If no grade scale is found, use standard scale shown above
+3. If no grade scale is found, use the standard scale shown above
 4. If no credit hours found, default to 3
 5. Combine similar categories (e.g., ""Exam 1"" and ""Exam 2"" -> ""Exams"")
 6. Common category names: Homework, Assignments, Quizzes, Exams, Midterm, Final, Projects, Participation, Labs
+7. Rule types are: DropLowest, KeepHighest (value is the number to drop/keep)
+8. Only add rules if explicitly mentioned in the syllabus
 
 SYLLABUS TEXT:
 " + syllabusText + @"
@@ -101,7 +121,12 @@ Return ONLY valid JSON, no explanation.";
                 Categories = parsed.Categories?.Select(c => new ParsedCategory
                 {
                     Name = c.Name,
-                    Weight = c.Weight
+                    Weight = c.Weight,
+                    Rules = c.Rules?.Select(r => new ParsedRule
+                    {
+                        Type = r.Type,
+                        Value = r.Value
+                    }).ToList() ?? new List<ParsedRule>()
                 }).ToList() ?? new List<ParsedCategory>(),
                 GradeScale = parsed.GradeScale != null ? new ParsedGradeScale
                 {
@@ -121,23 +146,26 @@ Return ONLY valid JSON, no explanation.";
             };
             
             // Validate and normalize weights to ensure they add up to 100
+            // Only consider categories with weight > 0 (exclude extra credit)
             if (result.Categories != null && result.Categories.Count > 0)
             {
-                var totalWeight = result.Categories.Sum(c => c.Weight);
-                if (Math.Abs(totalWeight - 100) > 0.5m)
+                var regularCategories = result.Categories.Where(c => c.Weight > 0).ToList();
+                var totalWeight = regularCategories.Sum(c => c.Weight);
+                
+                if (Math.Abs(totalWeight - 100) > 0.5m && totalWeight > 0)
                 {
                     // Normalize weights to add up to 100
                     var factor = 100m / totalWeight;
-                    foreach (var cat in result.Categories)
+                    foreach (var cat in regularCategories)
                     {
                         cat.Weight = Math.Round(cat.Weight * factor, 1);
                     }
                     
                     // Adjust last category to ensure exactly 100
-                    var adjustedTotal = result.Categories.Sum(c => c.Weight);
-                    if (adjustedTotal != 100)
+                    var adjustedTotal = regularCategories.Sum(c => c.Weight);
+                    if (adjustedTotal != 100 && regularCategories.Count > 0)
                     {
-                        result.Categories.Last().Weight += (100 - adjustedTotal);
+                        regularCategories.Last().Weight += (100 - adjustedTotal);
                     }
                 }
             }
@@ -151,7 +179,7 @@ Return ONLY valid JSON, no explanation.";
         }
     }
     
-    // Internal class for deserializing AI response
+    // Internal classes for deserializing AI response
     private class AiParsedSyllabus
     {
         public string? ClassName { get; set; }
@@ -164,6 +192,13 @@ Return ONLY valid JSON, no explanation.";
     {
         public string Name { get; set; } = "";
         public decimal Weight { get; set; }
+        public List<AiParsedRule>? Rules { get; set; }
+    }
+    
+    private class AiParsedRule
+    {
+        public string Type { get; set; } = "";
+        public int Value { get; set; }
     }
     
     private class AiParsedGradeScale
