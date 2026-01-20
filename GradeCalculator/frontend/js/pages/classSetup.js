@@ -74,6 +74,11 @@ const ClassSetupPage = {
                         <!-- Filled by prefillFromGradebook -->
                     </div>
                     
+                    <!-- Syllabus Preview (rules) -->
+                    <div class="form-section" id="syllabusPreview" style="display: none;">
+                        <!-- Filled by prefillFromSyllabus -->
+                    </div>
+                    
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
                         <button type="submit" class="btn btn-primary btn-lg">Create Class</button>
@@ -97,15 +102,71 @@ const ClassSetupPage = {
             if (nameInput) nameInput.value = this.syllabusData.className;
         }
         
+        // Set credit hours if found
+        if (this.syllabusData.creditHours) {
+            const creditInput = document.getElementById('creditHours');
+            if (creditInput) creditInput.value = this.syllabusData.creditHours;
+        }
+        
         // Replace default categories with parsed ones
         if (this.syllabusData.categories && this.syllabusData.categories.length > 0) {
             const list = document.getElementById('categoriesList');
             list.innerHTML = '';
             
+            // Store syllabus categories for later use (including rules)
+            this.parsedCategories = this.syllabusData.categories;
+            
             this.syllabusData.categories.forEach(cat => {
                 this.addCategory(cat.name, cat.weight);
             });
+            
+            // Show preview if there are rules
+            this.showSyllabusPreview();
         }
+    },
+    
+    showSyllabusPreview() {
+        if (!this.parsedCategories) return;
+        
+        // Check if any category has rules
+        const hasRules = this.parsedCategories.some(cat => cat.rules && cat.rules.length > 0);
+        if (!hasRules) return;
+        
+        const previewContainer = document.getElementById('syllabusPreview');
+        if (!previewContainer) return;
+        
+        let html = '<h2 class="section-title">⚡ Detected Grading Rules</h2>';
+        html += '<div class="gradebook-preview">';
+        
+        this.parsedCategories.forEach(cat => {
+            if (cat.rules && cat.rules.length > 0) {
+                html += `
+                    <div class="preview-category">
+                        <div class="preview-category-header">
+                            <strong>${cat.name}</strong>
+                        </div>
+                        <ul class="preview-items">
+                `;
+                
+                cat.rules.forEach(rule => {
+                    let ruleText = '';
+                    if (rule.type === 'DropLowest') {
+                        ruleText = `Drop lowest ${rule.value} grade${rule.value > 1 ? 's' : ''}`;
+                    } else if (rule.type === 'KeepHighest') {
+                        ruleText = `Keep highest ${rule.value} grade${rule.value > 1 ? 's' : ''}`;
+                    }
+                    html += `<li>✅ ${ruleText}</li>`;
+                });
+                
+                html += '</ul></div>';
+            }
+        });
+        
+        html += '</div>';
+        html += `<p class="preview-note">These rules will be applied to the categories when you create the class.</p>`;
+        
+        previewContainer.innerHTML = html;
+        previewContainer.style.display = 'block';
     },
     
     prefillFromGradebook() {
@@ -278,7 +339,7 @@ const ClassSetupPage = {
             return;
         }
         
-        // Gather categories
+        // Gather categories from the form
         const categoryRows = document.querySelectorAll('.category-row');
         const categories = [];
         
@@ -287,7 +348,14 @@ const ClassSetupPage = {
             const weight = parseInt(row.querySelector('.category-weight').value) || 0;
             
             if (catName) {
-                categories.push({ name: catName, weight });
+                // Find rules from syllabus data if available
+                const syllabusCategory = this.parsedCategories?.find(c => c.name === catName);
+                categories.push({ 
+                    name: catName, 
+                    weight,
+                    rules: syllabusCategory?.rules || [],
+                    items: syllabusCategory?.items || []
+                });
             }
         });
         
@@ -304,17 +372,26 @@ const ClassSetupPage = {
                 // Create class locally
                 newClass = LocalDataService.createClass({ name, creditHours });
                 
-                // Add categories and items
+                // Add categories, rules, and items
                 for (const cat of categories) {
-                    const gradebookCat = this.parsedCategories?.find(c => c.name === cat.name);
                     const newCategory = LocalDataService.addCategory(newClass.id, {
                         name: cat.name,
                         weight: cat.weight
                     });
                     
+                    // Add rules if present (from syllabus)
+                    if (cat.rules && cat.rules.length > 0) {
+                        for (const rule of cat.rules) {
+                            LocalDataService.addRule(newClass.id, newCategory.id, {
+                                type: rule.type,
+                                value: rule.value
+                            });
+                        }
+                    }
+                    
                     // Add grade items if we have gradebook data
-                    if (gradebookCat?.items) {
-                        for (const item of gradebookCat.items) {
+                    if (cat.items && cat.items.length > 0) {
+                        for (const item of cat.items) {
                             LocalDataService.addGradeItem(newClass.id, newCategory.id, {
                                 name: item.name,
                                 pointsEarned: item.pointsEarned,
@@ -332,15 +409,25 @@ const ClassSetupPage = {
                 
                 // Add categories
                 for (const cat of categories) {
-                    const gradebookCat = this.parsedCategories?.find(c => c.name === cat.name);
                     const newCategory = await CategoryService.create(newClass.id, {
                         name: cat.name,
                         weight: cat.weight
                     });
                     
+                    // Add rules if present
+                    if (cat.rules && cat.rules.length > 0) {
+                        for (const rule of cat.rules) {
+                            await CategoryService.addRule(newCategory.id, {
+                                categoryId: newCategory.id,
+                                type: rule.type,
+                                value: rule.value
+                            });
+                        }
+                    }
+                    
                     // Add grade items if we have gradebook data
-                    if (gradebookCat?.items) {
-                        for (const item of gradebookCat.items) {
+                    if (cat.items && cat.items.length > 0) {
+                        for (const item of cat.items) {
                             await GradeService.create(newCategory.id, {
                                 name: item.name,
                                 pointsEarned: item.pointsEarned,
