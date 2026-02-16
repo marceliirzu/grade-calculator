@@ -1,19 +1,19 @@
-/* Buttons - Aston Martin Theme */
+/* Buttons - Dark Theme */
 
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-2);
-    padding: var(--spacing-3) var(--spacing-5);
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
     font-family: var(--font-family);
-    font-size: var(--font-size-base);
+    font-size: 1rem;
     font-weight: 600;
     line-height: 1;
     border: 2px solid transparent;
-    border-radius: var(--radius-lg);
+    border-radius: 0.5rem;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 150ms ease;
     text-decoration: none;
     white-space: nowrap;
 }
@@ -25,16 +25,16 @@
 
 /* Primary Button - Gold */
 .btn-primary {
-    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
-    color: var(--color-dark-primary);
-    border-color: var(--color-accent);
-    box-shadow: var(--shadow-gold);
+    background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%);
+    color: #0D1B2A;
+    border-color: #D4AF37;
+    box-shadow: 0 4px 14px 0 rgba(212, 175, 55, 0.4);
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-accent) 100%);
+    background: linear-gradient(135deg, #E6C84D 0%, #D4AF37 100%);
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(201, 162, 39, 0.4);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -43,66 +43,66 @@
 
 /* Secondary Button - Dark Blue */
 .btn-secondary {
-    background: var(--color-dark-primary);
-    color: var(--color-white);
-    border-color: var(--color-dark-secondary);
+    background: #0D1B2A;
+    color: #FFFFFF;
+    border-color: #1B2838;
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background: var(--color-dark-secondary);
-    border-color: var(--color-primary);
+    background: #1B2838;
+    border-color: #00B4D8;
 }
 
 /* Outline Button */
 .btn-outline {
     background: transparent;
-    color: var(--color-primary);
-    border-color: var(--color-primary);
+    color: #00B4D8;
+    border-color: #00B4D8;
 }
 
 .btn-outline:hover:not(:disabled) {
-    background: var(--color-primary);
-    color: var(--color-white);
+    background: #00B4D8;
+    color: #FFFFFF;
 }
 
 /* Ghost Button */
 .btn-ghost {
     background: transparent;
-    color: var(--color-text-secondary);
+    color: #B0B0B0;
     border-color: transparent;
-    padding: var(--spacing-2);
+    padding: 0.5rem;
 }
 
 .btn-ghost:hover:not(:disabled) {
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-primary);
+    background: #1A1A1A;
+    color: #FFFFFF;
 }
 
 /* Danger Button */
 .btn-danger {
-    background: var(--color-danger);
-    color: var(--color-white);
-    border-color: var(--color-danger);
+    background: #EF4444;
+    color: #FFFFFF;
+    border-color: #EF4444;
 }
 
 .btn-danger:hover:not(:disabled) {
-    background: #A93226;
-    border-color: #A93226;
+    background: #DC2626;
+    border-color: #DC2626;
 }
 
 /* Button Sizes */
 .btn-sm {
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-sm);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
 }
 
 .btn-lg {
-    padding: var(--spacing-4) var(--spacing-8);
-    font-size: var(--font-size-lg);
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
 }
 
 .btn-icon {
-    padding: var(--spacing-2);
+    padding: 0.5rem;
     min-width: 40px;
     min-height: 40px;
 }
@@ -112,21 +112,22 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--spacing-2);
-    padding: var(--spacing-6);
-    background: var(--color-bg-card);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-xl);
+    gap: 0.5rem;
+    padding: 1.5rem;
+    background: #1F1F1F;
+    border: 2px solid #2D2D2D;
+    border-radius: 0.75rem;
     width: 100%;
     text-align: center;
-    transition: all var(--transition-fast);
+    transition: all 150ms ease;
+    cursor: pointer;
 }
 
 .btn-option:hover {
-    border-color: var(--color-primary);
-    background: var(--color-bg-tertiary);
+    border-color: #00B4D8;
+    background: #1A1A1A;
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
 }
 
 .btn-option .option-icon {
@@ -134,21 +135,21 @@
 }
 
 .btn-option .option-title {
-    font-size: var(--font-size-lg);
+    font-size: 1.125rem;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: #FFFFFF;
 }
 
 .btn-option .option-desc {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    color: #B0B0B0;
     font-weight: 400;
 }
 
 .option-buttons {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-3);
+    gap: 0.75rem;
 }
 
 @media (min-width: 640px) {
@@ -165,5 +166,5 @@
 .add-class-options {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-4);
+    gap: 1rem;
 }
