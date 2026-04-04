@@ -2,7 +2,7 @@
 const GradeScaleEditor = {
     render(gradeScale, onChange) {
         const scale = gradeScale || CONFIG.DEFAULT_GRADE_SCALE;
-        
+
         return `
             <div class="grade-scale-editor">
                 <div class="grade-scale-header">
@@ -39,23 +39,23 @@ const GradeScaleEditor = {
             </div>
         `;
     },
-    
+
     renderRow(letter, key, value, gpa) {
         const colorClass = Formatters.gradeColorClass(letter);
         return `
             <tr>
                 <td class="grade-letter ${colorClass}">${letter}</td>
                 <td>
-                    <input type="number" class="grade-input" 
-                           data-grade="${key}" 
-                           value="${value}" 
+                    <input type="number" class="grade-input"
+                           data-grade="${key}"
+                           value="${value}"
                            min="0" max="100" step="0.1">
                 </td>
                 <td class="gpa-points">${gpa.toFixed(1)}</td>
             </tr>
         `;
     },
-    
+
     getValues(container) {
         const inputs = container.querySelectorAll('.grade-input');
         const scale = {};

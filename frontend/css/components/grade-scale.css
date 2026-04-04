@@ -1,22 +1,23 @@
-/* Grade Scale Editor - Dark Ferrari Theme */
+/* Grade Scale Editor - 21st.dev Style */
 
 .grade-scale-editor {
-    background-color: var(--color-bg-card);
-    border: 1px solid var(--color-gray-700);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
     overflow: hidden;
+    backdrop-filter: blur(var(--glass-blur));
 }
 
 .grade-scale-header {
-    padding: var(--spacing-4) var(--spacing-5);
-    background-color: var(--color-gray-800);
-    border-bottom: 1px solid var(--color-gray-700);
+    padding: var(--spacing-3) var(--spacing-4);
+    background: var(--glass-bg);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .grade-scale-title {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--color-white);
+    color: var(--color-text-primary);
 }
 
 .grade-scale-table {
@@ -25,92 +26,63 @@
 }
 
 .grade-scale-table th {
-    padding: var(--spacing-3) var(--spacing-4);
+    padding: var(--spacing-2) var(--spacing-4);
     text-align: left;
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    color: var(--color-gray-400);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background-color: var(--color-gray-800);
-    border-bottom: 1px solid var(--color-gray-700);
+    background: var(--glass-bg);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .grade-scale-table td {
-    padding: var(--spacing-3) var(--spacing-4);
-    border-bottom: 1px solid var(--color-gray-700);
-    color: var(--color-gray-200);
+    padding: var(--spacing-2) var(--spacing-4);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
 }
 
-.grade-scale-table tr:last-child td {
-    border-bottom: none;
-}
+.grade-scale-table tr:last-child td { border-bottom: none; }
 
-.grade-scale-table tr:hover {
-    background-color: var(--color-gray-800);
-}
+.grade-scale-table tr:hover { background: var(--glass-bg); }
 
 .grade-letter {
-    font-weight: 700;
-    font-size: var(--font-size-lg);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
 }
 
 .grade-input {
-    width: 80px;
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-base);
-    color: var(--color-white);
-    background-color: var(--color-gray-700);
-    border: 1px solid var(--color-gray-600);
+    width: 72px;
+    padding: var(--spacing-1-5) var(--spacing-2);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     text-align: center;
+    font-family: var(--font-family);
+    transition: border-color var(--transition-fast);
 }
 
 .grade-input:focus {
     outline: none;
     border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.1);
 }
 
 .gpa-points {
-    color: var(--color-gray-400);
+    color: var(--color-text-muted);
     font-weight: 500;
+    font-size: var(--font-size-xs);
+    font-family: var(--font-family-mono);
 }
 
-/* Compact Display Mode */
-.grade-scale-compact {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-2);
-    padding: var(--spacing-3);
-}
-
-.grade-scale-compact .grade-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2);
-    padding: var(--spacing-2) var(--spacing-3);
-    background-color: var(--color-gray-800);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
-}
-
-.grade-scale-compact .grade-letter {
-    font-size: var(--font-size-sm);
-}
-
-.grade-scale-compact .grade-threshold {
-    color: var(--color-gray-400);
-}
-
-/* Responsive */
 @media (max-width: 640px) {
     .grade-scale-table th,
     .grade-scale-table td {
-        padding: var(--spacing-2) var(--spacing-3);
+        padding: var(--spacing-1-5) var(--spacing-2);
     }
-    
-    .grade-input {
-        width: 60px;
-        padding: var(--spacing-2);
-    }
+    .grade-input { width: 56px; }
 }

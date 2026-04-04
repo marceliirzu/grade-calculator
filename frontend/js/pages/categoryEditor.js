@@ -2,25 +2,25 @@
 const CategoryEditorPage = {
     classData: null,
     categoryData: null,
-    
+
     async init(params = {}) {
         const { classId, categoryId } = params;
-        
+
         if (!classId || !categoryId) {
             App.navigate('landing');
             return;
         }
-        
+
         try {
             this.classData = await ClassService.getById(classId);
             this.categoryData = this.classData.categories.find(c => c.id === parseInt(categoryId));
-            
+
             if (!this.categoryData) {
-                alert('Category not found');
+                Modal._showToast('Category not found');
                 App.navigate('class', { classId });
                 return;
             }
-            
+
             this.render();
             this.bindEvents();
         } catch (error) {
@@ -28,29 +28,29 @@ const CategoryEditorPage = {
             App.navigate('landing');
         }
     },
-    
+
     render() {
         const mainContent = document.getElementById('mainContent');
-        const percentage = this.categoryData.currentGrade !== null 
-            ? Formatters.percentage(this.categoryData.currentGrade) 
-            : '—';
-        
+        const percentage = this.categoryData.currentGrade !== null
+            ? Formatters.percentage(this.categoryData.currentGrade)
+            : '\u2014';
+
         mainContent.innerHTML = `
             <div class="category-editor-page">
                 <nav class="breadcrumb">
-                    <a href="#" id="backToLanding">My Classes</a>
-                    <span class="breadcrumb-separator">›</span>
+                    <a href="#" id="backToLanding">Classes</a>
+                    <span class="breadcrumb-separator">/</span>
                     <a href="#" id="backToClass">${this.classData.name}</a>
-                    <span class="breadcrumb-separator">›</span>
+                    <span class="breadcrumb-separator">/</span>
                     <span class="breadcrumb-current">${this.categoryData.name}</span>
                 </nav>
-                
+
                 <header class="category-header">
                     <div class="category-info">
                         <h1>${this.categoryData.name}</h1>
                         <div class="category-meta">
                             <span>Weight: ${this.categoryData.weight}%</span>
-                            <span>•</span>
+                            <span>&middot;</span>
                             <span>${this.categoryData.gradeItems?.length || 0} items</span>
                         </div>
                     </div>
@@ -58,41 +58,44 @@ const CategoryEditorPage = {
                         <div class="category-percentage">${percentage}</div>
                     </div>
                 </header>
-                
+
                 <section class="grade-items-section">
                     <div class="grade-items-header">
-                        <span class="grade-items-title">Grade Items</span>
-                        <button class="btn btn-primary btn-sm" id="addGradeBtn">+ Add Grade</button>
+                        <span class="grade-items-title">Grades</span>
+                        <div style="display: flex; gap: var(--spacing-2);">
+                            <button class="btn btn-secondary btn-sm" id="importGradesBtn">Import</button>
+                            <button class="btn btn-primary btn-sm" id="addGradeBtn">+ Add</button>
+                        </div>
                     </div>
                     <div id="gradeItemsList">
                         ${this.renderGradeItems()}
                     </div>
                 </section>
-                
+
                 ${RulesEditor.render(this.categoryData.rules)}
             </div>
         `;
     },
-    
+
     renderGradeItems() {
         const items = this.categoryData.gradeItems || [];
-        
+
         if (items.length === 0) {
             return `
                 <div class="empty-grades">
-                    <p>No grades yet. Click "+ Add Grade" to add your first grade.</p>
+                    <p>No grades yet. Add grades or import from your gradebook.</p>
                 </div>
             `;
         }
-        
+
         return items.map(item => this.renderGradeItem(item)).join('');
     },
-    
+
     renderGradeItem(item) {
-        const percentage = item.percentage !== null ? Formatters.percentage(item.percentage) : '—';
+        const percentage = item.percentage !== null ? Formatters.percentage(item.percentage) : '\u2014';
         const whatIfClass = item.isWhatIf ? 'what-if' : '';
         const earnedValue = item.pointsEarned !== null ? item.pointsEarned : '';
-        
+
         return `
             <div class="grade-item ${whatIfClass}" data-grade-id="${item.id}">
                 <div class="grade-item-name">
@@ -100,38 +103,40 @@ const CategoryEditorPage = {
                     ${item.isWhatIf ? '<span class="what-if-badge">What If</span>' : ''}
                 </div>
                 <div class="grade-item-score">
-                    <input type="number" class="earned-input" value="${earnedValue}" placeholder="—" step="0.1" min="0">
+                    <input type="number" class="earned-input" value="${earnedValue}" placeholder="\u2014" step="0.1" min="0">
                     <span class="divider">/</span>
                     <input type="number" class="possible-input" value="${item.pointsPossible}" step="0.1" min="0.1">
                 </div>
                 <div class="grade-item-percentage">${percentage}</div>
                 <div class="grade-item-actions">
-                    <button class="btn btn-ghost btn-icon what-if-btn" title="Toggle What-If">🔮</button>
-                    <button class="btn btn-ghost btn-icon delete-btn" title="Delete">🗑️</button>
+                    <button class="btn btn-ghost btn-icon what-if-btn" title="Toggle What-If">&#128302;</button>
+                    <button class="btn btn-ghost btn-icon delete-btn" title="Delete">&#128465;</button>
                 </div>
             </div>
         `;
     },
-    
+
     bindEvents() {
         // Navigation
         document.getElementById('backToLanding')?.addEventListener('click', (e) => {
             e.preventDefault();
             App.navigate('landing');
         });
-        
+
         document.getElementById('backToClass')?.addEventListener('click', (e) => {
             e.preventDefault();
             App.navigate('class', { classId: this.classData.id });
         });
-        
+
         // Add grade
         document.getElementById('addGradeBtn')?.addEventListener('click', () => this.addGrade());
-        
-        // Grade item events - use event delegation
+
+        // Import grades
+        document.getElementById('importGradesBtn')?.addEventListener('click', () => this.importGrades());
+
+        // Grade item events
         const gradeList = document.getElementById('gradeItemsList');
-        
-        // Name changes
+
         gradeList?.addEventListener('change', async (e) => {
             if (e.target.classList.contains('name-input')) {
                 const gradeId = e.target.closest('.grade-item').dataset.gradeId;
@@ -143,14 +148,13 @@ const CategoryEditorPage = {
                 await this.updateGradeScore(gradeId, gradeItem);
             }
         });
-        
-        // Button clicks
+
         gradeList?.addEventListener('click', async (e) => {
             const gradeItem = e.target.closest('.grade-item');
             if (!gradeItem) return;
-            
+
             const gradeId = gradeItem.dataset.gradeId;
-            
+
             if (e.target.closest('.what-if-btn')) {
                 await this.toggleWhatIf(gradeId);
             }
@@ -158,14 +162,14 @@ const CategoryEditorPage = {
                 await this.deleteGrade(gradeId);
             }
         });
-        
+
         // Rules
         document.getElementById('addRuleBtn')?.addEventListener('click', () => this.showAddRuleModal());
     },
-    
+
     async addGrade() {
         const itemCount = this.categoryData.gradeItems?.length || 0;
-        
+
         try {
             await GradeService.create({
                 categoryId: this.categoryData.id,
@@ -174,18 +178,41 @@ const CategoryEditorPage = {
                 pointsPossible: 100,
                 isWhatIf: false
             });
-            
+
             await this.refresh();
         } catch (error) {
             console.error('Failed to add grade:', error);
-            alert('Failed to add grade');
+            Modal._showToast('Failed to add grade');
         }
     },
-    
+
+    async importGrades() {
+        const grades = await Modal.showGradebookImport();
+        if (!grades || grades.length === 0) return;
+
+        try {
+            for (const grade of grades) {
+                await GradeService.create({
+                    categoryId: this.categoryData.id,
+                    name: grade.name,
+                    pointsEarned: grade.pointsEarned,
+                    pointsPossible: grade.pointsPossible,
+                    isWhatIf: false
+                });
+            }
+            Modal._showToast(`Imported ${grades.length} grades`);
+            await this.refresh();
+        } catch (error) {
+            console.error('Failed to import grades:', error);
+            Modal._showToast('Failed to import some grades');
+            await this.refresh();
+        }
+    },
+
     async updateGradeName(gradeId, name) {
         const item = this.categoryData.gradeItems.find(g => g.id === parseInt(gradeId));
         if (!item) return;
-        
+
         try {
             await GradeService.update(gradeId, {
                 categoryId: this.categoryData.id,
@@ -198,18 +225,18 @@ const CategoryEditorPage = {
             console.error('Failed to update grade name:', error);
         }
     },
-    
+
     async updateGradeScore(gradeId, gradeElement) {
         const item = this.categoryData.gradeItems.find(g => g.id === parseInt(gradeId));
         if (!item) return;
-        
+
         const earnedInput = gradeElement.querySelector('.earned-input');
         const possibleInput = gradeElement.querySelector('.possible-input');
         const nameInput = gradeElement.querySelector('.name-input');
-        
+
         const earned = earnedInput.value !== '' ? parseFloat(earnedInput.value) : null;
         const possible = parseFloat(possibleInput.value) || 100;
-        
+
         try {
             await GradeService.update(gradeId, {
                 categoryId: this.categoryData.id,
@@ -218,14 +245,14 @@ const CategoryEditorPage = {
                 pointsPossible: possible,
                 isWhatIf: item.isWhatIf
             });
-            
+
             await this.refresh();
         } catch (error) {
             console.error('Failed to update grade:', error);
-            alert('Failed to update grade');
+            Modal._showToast('Failed to update grade');
         }
     },
-    
+
     async toggleWhatIf(gradeId) {
         try {
             await GradeService.toggleWhatIf(gradeId);
@@ -234,7 +261,7 @@ const CategoryEditorPage = {
             console.error('Failed to toggle what-if:', error);
         }
     },
-    
+
     async deleteGrade(gradeId) {
         const confirmed = await Modal.confirm({
             title: 'Delete Grade',
@@ -242,21 +269,21 @@ const CategoryEditorPage = {
             confirmText: 'Delete',
             danger: true
         });
-        
+
         if (confirmed) {
             try {
                 await GradeService.delete(gradeId);
                 await this.refresh();
             } catch (error) {
                 console.error('Failed to delete grade:', error);
-                alert('Failed to delete grade');
+                Modal._showToast('Failed to delete grade');
             }
         }
     },
-    
+
     async showAddRuleModal() {
         Modal.show({
-            title: 'Add Grading Rule',
+            title: 'Add Rule',
             content: `
                 <div class="form-group">
                     <label class="form-label">Rule Type</label>
@@ -276,12 +303,12 @@ const CategoryEditorPage = {
                 <button class="btn btn-primary" id="addRule">Add Rule</button>
             `
         });
-        
+
         document.getElementById('cancelRule').addEventListener('click', () => Modal.hide());
         document.getElementById('addRule').addEventListener('click', async () => {
             const type = document.getElementById('ruleType').value;
             const value = parseInt(document.getElementById('ruleValue').value);
-            
+
             try {
                 await CategoryService.addRule(this.categoryData.id, {
                     categoryId: this.categoryData.id,
@@ -292,15 +319,15 @@ const CategoryEditorPage = {
                 await this.refresh();
             } catch (error) {
                 console.error('Failed to add rule:', error);
-                alert('Failed to add rule');
+                Modal._showToast('Failed to add rule');
             }
         });
     },
-    
+
     async refresh() {
-        await this.init({ 
-            classId: this.classData.id, 
-            categoryId: this.categoryData.id 
+        await this.init({
+            classId: this.classData.id,
+            categoryId: this.categoryData.id
         });
     }
 };
