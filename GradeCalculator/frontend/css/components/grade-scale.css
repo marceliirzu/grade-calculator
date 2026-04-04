@@ -1,12 +1,12 @@
-.grade-scale-editor{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden}
-.grade-scale-header{padding:12px 16px;background:var(--color-bg-elevated);border-bottom:1px solid var(--color-border)}
+.grade-scale-editor{background:var(--bg-2);border:1px solid var(--border-0);border-radius:var(--radius-xl);overflow:hidden}
+.grade-scale-header{padding:12px 16px;background:var(--bg-3);border-bottom:1px solid var(--border-0)}
 .grade-scale-title{font-size:var(--font-size-sm);font-weight:600}
 .grade-scale-table{width:100%;border-collapse:collapse}
-.grade-scale-table th{padding:8px 16px;text-align:left;font-size:var(--font-size-xs);font-weight:500;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;background:var(--color-bg-elevated);border-bottom:1px solid var(--color-border)}
-.grade-scale-table td{padding:8px 16px;border-bottom:1px solid var(--color-border);color:var(--color-text-secondary);font-size:var(--font-size-sm)}
+.grade-scale-table th{padding:8px 16px;text-align:left;font-size:var(--font-size-xs);font-weight:500;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;background:var(--bg-3);border-bottom:1px solid var(--border-0)}
+.grade-scale-table td{padding:8px 16px;border-bottom:1px solid var(--border-0);color:var(--text-1);font-size:var(--font-size-sm)}
 .grade-scale-table tr:last-child td{border-bottom:none}
 .grade-scale-table tr:hover{background:rgba(255,255,255,.015)}
 .grade-letter{font-weight:600;font-size:var(--font-size-sm)}
-.grade-input{width:68px;padding:5px 8px;font-size:var(--font-size-sm);color:var(--color-text-primary);background:var(--color-bg-elevated);border:1px solid var(--color-border-light);border-radius:var(--radius-md);text-align:center;font-family:var(--font-family)}
-.grade-input:focus{outline:none;border-color:var(--color-primary)}
-.gpa-points{color:var(--color-text-muted);font-weight:500;font-size:var(--font-size-xs);font-family:var(--font-family-mono)}
+.grade-input{width:68px;padding:5px 8px;font-size:var(--font-size-sm);color:var(--text-0);background:var(--bg-3);border:1px solid var(--border-1);border-radius:var(--radius-md);text-align:center;font-family:var(--font)}
+.grade-input:focus{outline:none;border-color:var(--primary)}
+.gpa-points{color:var(--text-2);font-weight:500;font-size:var(--font-size-xs);font-family:var(--mono)}
