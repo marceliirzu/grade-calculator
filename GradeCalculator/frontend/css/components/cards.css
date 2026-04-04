@@ -1,254 +1,41 @@
-/* Cards - 21st.dev Glass Morphism Style */
-
+/* Cards */
 .card {
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-2xl);
+    border-radius: var(--radius-xl);
     padding: var(--spacing-5);
     transition: all var(--transition-normal);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
 }
-
-.card:hover {
-    border-color: var(--color-border-light);
-}
-
+.card:hover { border-color: var(--color-border-light); }
 .card-header { margin-bottom: var(--spacing-4); }
+.card-title { font-size: var(--font-size-lg); font-weight: 600; }
+.card-subtitle { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-top: var(--spacing-1); }
 
-.card-title {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    letter-spacing: -0.01em;
-}
-
-.card-subtitle {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-muted);
-    margin-top: var(--spacing-1);
-}
-
-/* ==================== Class Card ==================== */
-.class-card {
-    cursor: pointer;
-    padding: var(--spacing-5);
-    min-height: 180px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    background: var(--color-bg-card);
-    position: relative;
-    overflow: hidden;
-}
-
-/* Subtle gradient accent on top */
-.class-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
-    opacity: 0;
-    transition: opacity var(--transition-normal);
-}
-
-.class-card:hover {
-    border-color: var(--color-border-light);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.class-card:hover::before { opacity: 1; }
-
-.class-card .card-title {
-    font-size: var(--font-size-xl);
-    letter-spacing: -0.02em;
-}
-
-.grade-display {
-    display: flex;
-    align-items: baseline;
-    gap: var(--spacing-3);
-    margin-top: auto;
-    padding-top: var(--spacing-4);
-}
-
-.grade-display .letter-grade {
-    font-size: var(--font-size-4xl);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.02em;
-}
-
-.grade-display .percentage {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
-    font-weight: 500;
-}
-
-/* ==================== GPA Card ==================== */
-.gpa-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-2xl);
-    padding: var(--spacing-6);
-    backdrop-filter: blur(var(--glass-blur));
-    position: relative;
-    overflow: hidden;
-}
-
-/* Accent glow */
-.gpa-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle at 30% 30%, rgba(129, 140, 248, 0.06), transparent 50%);
-    pointer-events: none;
-}
-
-.gpa-card-title {
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: var(--spacing-3);
-    position: relative;
-}
-
-.gpa-value {
-    font-size: var(--font-size-5xl);
-    font-weight: 700;
-    color: var(--color-text-primary);
-    line-height: 1;
-    letter-spacing: -0.03em;
-    position: relative;
-}
-
-.gpa-value .gpa-scale {
-    font-size: var(--font-size-lg);
-    color: var(--color-text-muted);
-    font-weight: 400;
-}
-
-.gpa-details {
-    margin-top: var(--spacing-5);
-    padding-top: var(--spacing-4);
-    border-top: 1px solid var(--color-border);
-    position: relative;
-}
-
-.gpa-detail-row {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--spacing-1-5) 0;
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-}
-
-.class-summary-list {
-    margin-top: var(--spacing-4);
-    padding-top: var(--spacing-4);
-    border-top: 1px solid var(--color-border);
-    position: relative;
-}
-
-.class-summary-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-1-5) 0;
-    font-size: var(--font-size-sm);
-}
-
-.class-summary-name {
-    color: var(--color-text-secondary);
-}
-
-.class-summary-grade {
-    font-weight: 600;
-    font-size: var(--font-size-xs);
-    padding: var(--spacing-0-5) var(--spacing-2);
-    border-radius: var(--radius-full);
-    background: var(--glass-bg);
-}
-
-/* ==================== Category Card ==================== */
+/* Category Card */
 .category-card {
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-2xl);
+    border-radius: var(--radius-xl);
     padding: var(--spacing-5);
     cursor: pointer;
     transition: all var(--transition-normal);
-    backdrop-filter: blur(var(--glass-blur));
 }
+.category-card:hover { border-color: var(--color-border-light); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
-.category-card:hover {
-    border-color: var(--color-border-light);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.category-card .category-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-4);
-}
-
-.category-card .category-name {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    letter-spacing: -0.01em;
-}
-
+.category-card .category-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4); }
+.category-card .category-name { font-size: var(--font-size-lg); font-weight: 600; margin: 0; }
 .category-card .category-weight {
-    background: var(--color-primary-subtle);
+    background: rgba(129,140,248,0.1);
     color: var(--color-primary);
-    padding: var(--spacing-1) var(--spacing-2-5);
+    padding: 2px 10px;
     border-radius: var(--radius-full);
     font-size: var(--font-size-xs);
     font-weight: 600;
-    border: 1px solid rgba(129, 140, 248, 0.15);
+    border: 1px solid rgba(129,140,248,0.15);
 }
-
-.category-card .category-body {
-    margin-bottom: var(--spacing-3);
-}
-
-.category-card .category-grade {
-    font-size: var(--font-size-3xl);
-    font-weight: 700;
-    color: var(--color-text-primary);
-    letter-spacing: -0.02em;
-    line-height: 1.2;
-}
-
-.category-card .category-items {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-muted);
-    margin-top: var(--spacing-1);
-}
-
-.category-card .category-footer {
-    padding-top: var(--spacing-3);
-    border-top: 1px solid var(--color-border);
-}
-
-.category-card .click-hint {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-muted);
-    transition: color var(--transition-fast);
-}
-
-.category-card:hover .click-hint {
-    color: var(--color-primary);
-}
+.category-card .category-body { margin-bottom: var(--spacing-3); }
+.category-card .category-grade { font-size: var(--font-size-3xl); font-weight: 700; letter-spacing: -0.02em; }
+.category-card .category-items { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-top: var(--spacing-1); }
+.category-card .category-footer { padding-top: var(--spacing-3); border-top: 1px solid var(--color-border); }
+.category-card .click-hint { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.category-card:hover .click-hint { color: var(--color-primary); }
