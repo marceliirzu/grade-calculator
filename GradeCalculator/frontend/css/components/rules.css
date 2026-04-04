@@ -1,83 +1,14 @@
-/* Rules Section - 21st.dev Style */
-.rules-section {
-    margin-bottom: var(--spacing-5);
-    padding: var(--spacing-5);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-2xl);
-    border: 1px solid var(--color-border);
-    backdrop-filter: blur(var(--glass-blur));
-}
-
-.rules-section .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-3);
-}
-
-.rules-section h3 {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    letter-spacing: -0.01em;
-    margin: 0;
-}
-
-.rules-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-2);
-}
-
-.empty-rules {
-    color: var(--color-text-muted);
-    font-size: var(--font-size-sm);
-    margin: 0;
-}
-
-.rule-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-3);
-    background: var(--glass-bg);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-    transition: border-color var(--transition-fast);
-}
-
-.rule-item:hover {
-    border-color: var(--color-border-light);
-}
-
-.rule-description {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-}
-
-.delete-rule-btn {
-    opacity: 0.3;
-    transition: opacity var(--transition-fast);
-}
-
-.rule-item:hover .delete-rule-btn {
-    opacity: 0.8;
-}
-
-/* Weight Input Styling */
-.weight-input-row {
-    display: flex;
-    gap: var(--spacing-2);
-    margin-bottom: var(--spacing-2);
-    align-items: center;
-}
-
-.weight-input-row span:first-child {
-    min-width: 100px;
-    color: var(--color-text-muted);
-    font-size: var(--font-size-sm);
-}
-
-.weight-input {
-    width: 80px !important;
-}
+.rules-section{margin-bottom:20px;padding:20px;background:var(--color-bg-card);border-radius:var(--radius-xl);border:1px solid var(--color-border)}
+.rules-section .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.rules-section h3{font-size:var(--font-size-lg);font-weight:600;margin:0}
+.rules-list{display:flex;flex-direction:column;gap:8px}
+.empty-rules{color:var(--color-text-muted);font-size:var(--font-size-sm);margin:0}
+.rule-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--color-bg-elevated);border-radius:var(--radius-lg);border:1px solid var(--color-border)}
+.rule-item:hover{border-color:var(--color-border-light)}
+.rule-description{color:var(--color-text-secondary);font-size:var(--font-size-sm)}
+.rule-icon{margin-right:6px}
+.delete-rule-btn{opacity:.3;transition:opacity var(--transition-fast)}
+.rule-item:hover .delete-rule-btn{opacity:.8}
+.weight-input-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.weight-input-row span:first-child{min-width:100px;color:var(--color-text-muted);font-size:var(--font-size-sm)}
+.weight-input{width:80px!important}

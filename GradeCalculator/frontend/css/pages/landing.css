@@ -1,51 +1,30 @@
-/* Landing Page */
-.landing-page { max-width: 1200px; margin: 0 auto; }
-
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-8); }
-.page-header h1 { margin: 0; }
+.landing-page{max-width:1100px;margin:0 auto}
 
 /* Classes Grid */
-.classes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--spacing-4); }
+.classes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 
 /* Class Card */
-.class-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-xl);
-    padding: var(--spacing-5);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    position: relative;
-    overflow: hidden;
-}
-.class-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
-    opacity: 0;
-    transition: opacity var(--transition-normal);
-}
-.class-card:hover { border-color: var(--color-border-light); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-.class-card:hover::before { opacity: 1; }
+.class-card{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;cursor:pointer;transition:all var(--transition-fast);position:relative;overflow:hidden}
+.class-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--color-primary),var(--color-accent));opacity:0;transition:opacity var(--transition-normal)}
+.class-card:hover{border-color:var(--color-border-light);transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.class-card:hover::before{opacity:1}
 
-.class-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-4); }
-.class-name { font-size: var(--font-size-lg); font-weight: 600; color: var(--color-text-primary); margin: 0; }
-.credit-hours { font-size: var(--font-size-xs); color: var(--color-text-muted); background: var(--color-gray-800); padding: 2px 8px; border-radius: var(--radius-full); }
+.class-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.class-name{font-size:var(--font-size-lg);font-weight:600;margin:0}
+.credit-hours{font-size:var(--font-size-xs);color:var(--color-text-muted);background:var(--color-bg-elevated);padding:3px 9px;border-radius:var(--radius-full)}
 
-.class-card-body { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-4); }
-.class-grade .letter-grade { font-size: var(--font-size-4xl); font-weight: 700; display: block; letter-spacing: -0.03em; }
-.class-grade .percentage { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.class-card-body{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.class-grade .letter-grade{font-size:var(--font-size-4xl);font-weight:700;display:block;letter-spacing:-.03em;line-height:1}
+.class-grade .percentage{font-size:var(--font-size-xs);color:var(--color-text-muted);margin-top:4px;display:block}
 
-.class-categories { display: flex; flex-wrap: wrap; gap: var(--spacing-1-5); justify-content: flex-end; }
-.category-chip { font-size: 10px; padding: 2px 8px; background: var(--color-gray-800); color: var(--color-text-muted); border-radius: var(--radius-full); border: 1px solid var(--color-border); }
+.class-categories{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end}
+.category-chip{font-size:10px;padding:2px 8px;background:var(--color-bg-elevated);color:var(--color-text-muted);border-radius:var(--radius-full)}
 
-.class-card-footer { border-top: 1px solid var(--color-border); padding-top: var(--spacing-3); }
-.click-hint { font-size: var(--font-size-xs); color: var(--color-text-muted); }
-.class-card:hover .click-hint { color: var(--color-primary); }
+.class-card-footer{border-top:1px solid var(--color-border);padding-top:12px}
+.click-hint{font-size:var(--font-size-xs);color:var(--color-text-muted)}
+.class-card:hover .click-hint{color:var(--color-primary)}
 
-@media (max-width: 640px) {
-    .page-header { flex-direction: column; gap: var(--spacing-4); text-align: center; }
-    .classes-grid { grid-template-columns: 1fr; }
+@media(max-width:640px){
+    .page-header{flex-direction:column;gap:14px;text-align:center}
+    .classes-grid{grid-template-columns:1fr}
 }
