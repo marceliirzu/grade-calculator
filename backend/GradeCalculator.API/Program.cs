@@ -15,30 +15,43 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database — build connection string from Railway MYSQL_* env vars if not explicitly provided
+// Database — build connection string from Railway env vars
 static string BuildConnectionString(IConfiguration config)
 {
     var cs = config.GetConnectionString("DefaultConnection");
 
-    // If it's still a placeholder/SQLite/empty, build from individual Railway env vars
-    if (string.IsNullOrWhiteSpace(cs) || cs.StartsWith("Data Source=") || cs.Contains("SET_MYSQL"))
-    {
-        var host = Environment.GetEnvironmentVariable("MYSQLHOST")
-                   ?? Environment.GetEnvironmentVariable("MYSQL_HOST");
-        var port = Environment.GetEnvironmentVariable("MYSQLPORT")
-                   ?? Environment.GetEnvironmentVariable("MYSQL_PORT") ?? "3306";
-        var db   = Environment.GetEnvironmentVariable("MYSQLDATABASE")
-                   ?? Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? "gradecalculator";
-        var user = Environment.GetEnvironmentVariable("MYSQLUSER")
-                   ?? Environment.GetEnvironmentVariable("MYSQL_USER");
-        var pwd  = Environment.GetEnvironmentVariable("MYSQLPASSWORD")
-                   ?? Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
+    // If it's a real connection string (not placeholder/SQLite), use it directly
+    if (!string.IsNullOrWhiteSpace(cs) && !cs.StartsWith("Data Source=") && !cs.Contains("SET_MYSQL"))
+        return cs;
 
-        if (host != null && user != null && pwd != null)
-            return $"Server={host};Port={port};Database={db};Uid={user};Pwd={pwd};";
+    // Try MYSQL_URL or DATABASE_URL (full URI format: mysql://user:pass@host:port/db)
+    var mysqlUrl = Environment.GetEnvironmentVariable("MYSQL_URL")
+                   ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+                   ?? Environment.GetEnvironmentVariable("MYSQL_PRIVATE_URL");
+
+    if (mysqlUrl != null && mysqlUrl.StartsWith("mysql://"))
+    {
+        var uri = new Uri(mysqlUrl);
+        var userInfo = uri.UserInfo.Split(':');
+        var user = userInfo[0];
+        var pwd  = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 3306;
+        var db   = uri.AbsolutePath.TrimStart('/');
+        return $"Server={host};Port={port};Database={db};Uid={user};Pwd={pwd};";
     }
 
-    return cs ?? throw new InvalidOperationException("No MySQL connection string found.");
+    // Fall back to individual MYSQLHOST / MYSQL_HOST vars
+    var h = Environment.GetEnvironmentVariable("MYSQLHOST") ?? Environment.GetEnvironmentVariable("MYSQL_HOST");
+    var p = Environment.GetEnvironmentVariable("MYSQLPORT") ?? Environment.GetEnvironmentVariable("MYSQL_PORT") ?? "3306";
+    var d = Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? "railway";
+    var u = Environment.GetEnvironmentVariable("MYSQLUSER") ?? Environment.GetEnvironmentVariable("MYSQL_USER");
+    var pw = Environment.GetEnvironmentVariable("MYSQLPASSWORD") ?? Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
+
+    if (h != null && u != null && pw != null)
+        return $"Server={h};Port={p};Database={d};Uid={u};Pwd={pw};";
+
+    throw new InvalidOperationException("No MySQL connection string found. Set MYSQL_URL or ConnectionStrings__DefaultConnection.");
 }
 
 var connectionString = BuildConnectionString(builder.Configuration);
