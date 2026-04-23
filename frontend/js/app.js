@@ -7,7 +7,7 @@ const App = {
         Modal.init();
         CONFIG.loadAPlusValue();
         this.updateAuthUI();
-        this.navigate(AuthService.isLoggedIn() ? 'semesterList' : 'landing');
+        this.navigate('semesterList');
     },
 
     updateAuthUI() {

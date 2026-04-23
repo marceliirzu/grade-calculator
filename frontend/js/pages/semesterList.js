@@ -22,11 +22,6 @@ const SemesterListPage = {
     semesters: [],
 
     async init() {
-        if (!AuthService.isLoggedIn()) {
-            App.navigate('landing');
-            return;
-        }
-
         // Show loading skeleton
         document.getElementById('mainContent').innerHTML = `
             <div class="semester-list-page">
