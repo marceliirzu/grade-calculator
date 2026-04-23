@@ -18,4 +18,3 @@ COPY --from=build /app/out .
 ENV ASPNETCORE_URLS=http://+:${PORT:-5000}
 
 ENTRYPOINT ["dotnet", "GradeCalculator.API.dll"]
-
