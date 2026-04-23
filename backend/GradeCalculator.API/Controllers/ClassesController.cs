@@ -116,7 +116,7 @@ public class ClassesController : ControllerBase
             return Forbid();
 
         classEntity.Name = request.Name;
-        classEntity.CreditHours = request.CreditHours;
+        classEntity.CreditHours = (int)request.CreditHours;
         classEntity.ShowOnlyCAndUp = request.ShowOnlyCAndUp;
         classEntity.UpdatedAt = DateTime.UtcNow;
         
