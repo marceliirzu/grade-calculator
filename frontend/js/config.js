@@ -5,7 +5,7 @@ const CONFIG = {
         if (window.ENV?.API_BASE_URL) return window.ENV.API_BASE_URL;
         const h = window.location.hostname;
         if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:5000/api';
-        return '';
+        return 'https://grade-calculator-production-7ca8.up.railway.app/api';
     })(),
     
     // A+ GPA value (can be 4.0 or 4.33)
