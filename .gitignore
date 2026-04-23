@@ -20,5 +20,11 @@ Thumbs.db
 # Logs
 *.log
 
+# Environment config (contains secrets/URLs — never commit)
+frontend/env.js
+.env
+.env.local
+.env.production
+
 # Dependencies
 node_modules/

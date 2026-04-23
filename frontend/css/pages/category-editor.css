@@ -163,9 +163,9 @@
 .grade-item-percentage {
     font-weight: 600;
     font-size: var(--font-size-sm);
-    color: var(--color-primary);
     text-align: center;
     font-family: var(--font-family-mono);
+    min-width: 48px;
 }
 
 .grade-item-actions {

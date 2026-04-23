@@ -1,0 +1,476 @@
+/* ============================================================
+   semester.css — Semester list, history, and GPA sidebar styles
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   Page containers
+   ---------------------------------------------------------- */
+
+.semester-list-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--spacing-6) var(--spacing-4);
+}
+
+.semester-history-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--spacing-6) var(--spacing-4);
+}
+
+/* ----------------------------------------------------------
+   Page header
+   ---------------------------------------------------------- */
+
+.page-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-6);
+  gap: var(--spacing-3);
+}
+
+/* ----------------------------------------------------------
+   Cumulative GPA banner
+   ---------------------------------------------------------- */
+
+.cumulative-gpa-banner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-4);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4) var(--spacing-6);
+  margin-bottom: var(--spacing-6);
+}
+
+.cumulative-label {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.cumulative-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+/* ----------------------------------------------------------
+   Semesters grid
+   ---------------------------------------------------------- */
+
+.semesters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-4);
+}
+
+/* ----------------------------------------------------------
+   Semester card
+   ---------------------------------------------------------- */
+
+.semester-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.semester-card:hover {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+}
+
+.semester-card--active {
+  border-color: var(--color-primary);
+}
+
+/* ----------------------------------------------------------
+   Semester card header
+   ---------------------------------------------------------- */
+
+.semester-card-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.semester-name {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.semester-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-1);
+}
+
+.semester-gpa {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------
+   Goal progress bar (inside semester card)
+   ---------------------------------------------------------- */
+
+.goal-bar-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}
+
+.goal-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--color-bg-elevated);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.goal-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.goal-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------
+   Semester card actions
+   ---------------------------------------------------------- */
+
+.semester-card-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}
+
+/* ----------------------------------------------------------
+   Skeleton card (shimmer animation handled externally)
+   ---------------------------------------------------------- */
+
+.skeleton-card {
+  /* shimmer animation is applied via global utility class */
+}
+
+/* ----------------------------------------------------------
+   History summary card
+   ---------------------------------------------------------- */
+
+.history-summary-card {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: var(--spacing-6);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4) var(--spacing-6);
+  margin-bottom: var(--spacing-4);
+  flex-wrap: wrap;
+}
+
+.history-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.history-stat-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.history-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+/* ----------------------------------------------------------
+   History chart card
+   ---------------------------------------------------------- */
+
+.history-chart-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4) var(--spacing-6);
+  margin-bottom: var(--spacing-4);
+}
+
+.history-chart-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spacing-4);
+}
+
+.history-chart {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: var(--spacing-3);
+  height: 160px;
+  overflow-x: auto;
+  padding-bottom: var(--spacing-1);
+}
+
+.history-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.history-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.history-bar-value {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.history-bar {
+  min-height: 4px;
+  width: 28px;
+  border-radius: 4px 4px 0 0;
+  background: var(--color-primary);
+  transition: height 0.4s ease;
+}
+
+/* Grade-colored bars */
+.history-bar.grade-a {
+  background: #34D399;
+  color: inherit;
+}
+
+.history-bar.grade-b {
+  background: #60A5FA;
+  color: inherit;
+}
+
+.history-bar.grade-c {
+  background: #FBBF24;
+  color: inherit;
+}
+
+.history-bar.grade-d {
+  background: #FB923C;
+  color: inherit;
+}
+
+.history-bar.grade-f {
+  background: #F87171;
+  color: inherit;
+}
+
+/* Support nesting: parent has grade class, child is .history-bar */
+.grade-a .history-bar {
+  background: #34D399;
+}
+
+.grade-b .history-bar {
+  background: #60A5FA;
+}
+
+.grade-c .history-bar {
+  background: #FBBF24;
+}
+
+.grade-d .history-bar {
+  background: #FB923C;
+}
+
+.grade-f .history-bar {
+  background: #F87171;
+}
+
+.history-bar-label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ----------------------------------------------------------
+   History table card
+   ---------------------------------------------------------- */
+
+.history-table-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4) var(--spacing-6);
+  margin-bottom: var(--spacing-4);
+}
+
+.history-table-header {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--spacing-2);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.history-table-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.15s ease;
+  border-radius: var(--radius-sm);
+}
+
+.history-table-row:last-child {
+  border-bottom: none;
+}
+
+.history-table-row:hover {
+  background: var(--color-bg-elevated);
+}
+
+.history-sem-name {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.history-gpa {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.history-goal {
+  color: var(--color-text-muted);
+}
+
+.history-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: var(--spacing-8) var(--spacing-4);
+  font-size: 0.875rem;
+}
+
+/* ----------------------------------------------------------
+   GPA sidebar — semester section
+   ---------------------------------------------------------- */
+
+.gpa-semester-section {
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ----------------------------------------------------------
+   GPA goal bar (sidebar)
+   ---------------------------------------------------------- */
+
+.gpa-goal-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-2);
+}
+
+.gpa-goal-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.gpa-goal-track {
+  height: 6px;
+  background: var(--color-bg-elevated);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.gpa-goal-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.gpa-goal-fill.gpa-goal-green {
+  background: var(--color-success);
+}
+
+.gpa-goal-fill.gpa-goal-yellow {
+  background: var(--color-warning);
+}
+
+.gpa-goal-fill.gpa-goal-red {
+  background: var(--color-danger);
+}
+
+.gpa-goal-pct {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* ----------------------------------------------------------
+   Form utilities (modal)
+   ---------------------------------------------------------- */
+
+.form-row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--spacing-3);
+  align-items: flex-start;
+}
+
+.form-row > * {
+  flex: 1;
+}
+
+.form-label-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  display: inline;
+  margin-left: var(--spacing-1);
+}

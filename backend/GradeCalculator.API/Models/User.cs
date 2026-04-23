@@ -11,4 +11,5 @@ public class User
     
     // Navigation
     public ICollection<Class> Classes { get; set; } = new List<Class>();
+    public ICollection<Semester> Semesters { get; set; } = new List<Semester>();
 }

@@ -1,6 +1,12 @@
 // Configuration
 const CONFIG = {
-    API_BASE_URL: 'http://localhost:5000/api',
+    API_BASE_URL: (() => {
+        // Reads from env.js (gitignored) — see env.example.js for setup
+        if (window.ENV?.API_BASE_URL) return window.ENV.API_BASE_URL;
+        const h = window.location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:5000/api';
+        return '';
+    })(),
     
     // A+ GPA value (can be 4.0 or 4.33)
     A_PLUS_VALUE: 4.0,

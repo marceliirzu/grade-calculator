@@ -17,18 +17,18 @@ const GradeScaleEditor = {
                         </tr>
                     </thead>
                     <tbody>
-                        ${this.renderRow('A+', 'aPlus', scale.aPlus, 4.0)}
+                        ${this.renderRow('A+', 'aPlus', scale.aPlus, CONFIG.A_PLUS_VALUE)}
                         ${this.renderRow('A', 'a', scale.a, 4.0)}
-                        ${this.renderRow('A-', 'aMinus', scale.aMinus, 3.7)}
-                        ${this.renderRow('B+', 'bPlus', scale.bPlus, 3.3)}
+                        ${this.renderRow('A-', 'aMinus', scale.aMinus, 3.67)}
+                        ${this.renderRow('B+', 'bPlus', scale.bPlus, 3.33)}
                         ${this.renderRow('B', 'b', scale.b, 3.0)}
-                        ${this.renderRow('B-', 'bMinus', scale.bMinus, 2.7)}
-                        ${this.renderRow('C+', 'cPlus', scale.cPlus, 2.3)}
+                        ${this.renderRow('B-', 'bMinus', scale.bMinus, 2.67)}
+                        ${this.renderRow('C+', 'cPlus', scale.cPlus, 2.33)}
                         ${this.renderRow('C', 'c', scale.c, 2.0)}
-                        ${this.renderRow('C-', 'cMinus', scale.cMinus, 1.7)}
-                        ${this.renderRow('D+', 'dPlus', scale.dPlus, 1.3)}
+                        ${this.renderRow('C-', 'cMinus', scale.cMinus, 1.67)}
+                        ${this.renderRow('D+', 'dPlus', scale.dPlus, 1.33)}
                         ${this.renderRow('D', 'd', scale.d, 1.0)}
-                        ${this.renderRow('D-', 'dMinus', scale.dMinus, 0.7)}
+                        ${this.renderRow('D-', 'dMinus', scale.dMinus, 0.67)}
                         <tr>
                             <td class="grade-letter grade-f">F</td>
                             <td>&lt; ${scale.dMinus}%</td>
@@ -51,7 +51,7 @@ const GradeScaleEditor = {
                            value="${value}"
                            min="0" max="100" step="0.1">
                 </td>
-                <td class="gpa-points">${gpa.toFixed(1)}</td>
+                <td class="gpa-points">${gpa.toFixed(2)}</td>
             </tr>
         `;
     },

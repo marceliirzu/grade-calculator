@@ -147,11 +147,11 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<ApiResponse<AuthResponse>>> DevLogin([FromBody] DevLoginRequest? request = null)
     {
         // Only allow in development
-        /*var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         if (env != "Development")
         {
             return BadRequest(ApiResponse<AuthResponse>.Fail("Dev login not available in production"));
-        }*/
+        }
         
         var email = request?.Email ?? "dev@gradecalculator.local";
         

@@ -4,6 +4,7 @@ public class Class
 {
     public int Id { get; set; }
     public int UserId { get; set; }
+    public int? SemesterId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int CreditHours { get; set; } = 3;
     public bool ShowOnlyCAndUp { get; set; } = false;
@@ -12,6 +13,7 @@ public class Class
     
     // Navigation
     public User? User { get; set; }
+    public Semester? Semester { get; set; }
     public GradeScale? GradeScale { get; set; }
     public ICollection<Category> Categories { get; set; } = new List<Category>();
 }

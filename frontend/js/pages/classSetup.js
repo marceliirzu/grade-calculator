@@ -1,4 +1,9 @@
 // Class Setup Page (Wizard) with AI Autofill
+function _escAttr(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
 const ClassSetupPage = {
     step: 1,
     syllabusData: null,
@@ -13,6 +18,7 @@ const ClassSetupPage = {
     init(params = {}) {
         this.step = 1;
         this.syllabusData = params.syllabusData || null;
+        this.semesterId = params.semesterId || SemesterService.getCurrentSemesterId() || null;
 
         // Reset form data
         this.formData = {
@@ -108,7 +114,7 @@ const ClassSetupPage = {
                 <div class="form-group">
                     <label class="form-label">Class Name</label>
                     <input type="text" class="form-input" id="className"
-                           value="${this.formData.name}" placeholder="e.g., Calculus I">
+                           value="${_escAttr(this.formData.name)}" placeholder="e.g., Calculus I">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Credits</label>
@@ -123,6 +129,7 @@ const ClassSetupPage = {
                     <span class="form-check-label">D counts as failing (C and up only)</span>
                 </label>
             </div>
+            ${this.semesterId ? '<p class="form-hint">Adding to current semester</p>' : ''}
             <div class="setup-nav">
                 <div></div>
                 <button class="btn btn-primary btn-lg" id="nextBtn">Next</button>
@@ -143,7 +150,7 @@ const ClassSetupPage = {
                 ${this.formData.categories.map((cat, i) => `
                     <div class="category-row">
                         <input type="text" class="form-input category-name"
-                               value="${cat.name}" data-index="${i}" placeholder="Category name">
+                               value="${_escAttr(cat.name)}" data-index="${i}" placeholder="Category name">
                         <div class="input-group">
                             <input type="number" class="form-input category-weight"
                                    value="${cat.weight}" data-index="${i}" min="0" max="100">
@@ -198,7 +205,7 @@ const ClassSetupPage = {
         });
 
         document.querySelectorAll('.category-weight').forEach(input => {
-            input.addEventListener('change', (e) => {
+            input.addEventListener('input', (e) => {
                 this.formData.categories[e.target.dataset.index].weight = parseFloat(e.target.value) || 0;
                 this.render();
                 this.bindEvents();
@@ -217,7 +224,6 @@ const ClassSetupPage = {
     nextStep() {
         if (this.step === 1) {
             this.formData.name = document.getElementById('className').value;
-            this.formData.creditHours = parseFloat(document.getElementById('creditHours').value);
             this.formData.showOnlyCAndUp = document.getElementById('showOnlyCAndUp').checked;
 
             const validation = Validation.validateClassName(this.formData.name);
@@ -225,6 +231,13 @@ const ClassSetupPage = {
                 Modal._showToast(validation.error);
                 return;
             }
+
+            const creditHoursVal = parseFloat(document.getElementById('creditHours').value);
+            if (isNaN(creditHoursVal) || creditHoursVal < 0.5 || creditHoursVal > 10) {
+                Modal._showToast('Credit hours must be between 0.5 and 10');
+                return;
+            }
+            this.formData.creditHours = creditHoursVal;
         }
 
         this.step++;
@@ -252,7 +265,8 @@ const ClassSetupPage = {
             const newClass = await ClassService.create({
                 name: this.formData.name,
                 creditHours: this.formData.creditHours,
-                showOnlyCAndUp: this.formData.showOnlyCAndUp
+                showOnlyCAndUp: this.formData.showOnlyCAndUp,
+                semesterId: this.semesterId
             });
 
             await ClassService.updateGradeScale(newClass.id, this.formData.gradeScale);

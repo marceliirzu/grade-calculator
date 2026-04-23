@@ -6,12 +6,13 @@ using GradeCalculator.API.DTOs.Requests;
 using GradeCalculator.API.DTOs.Responses;
 using GradeCalculator.API.Models;
 using GradeCalculator.API.Services.Interfaces;
+using System.Security.Claims;
 
 namespace GradeCalculator.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-// [Authorize] // Uncomment when auth is set up
+[Authorize]
 public class ClassesController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -25,22 +26,20 @@ public class ClassesController : ControllerBase
     
     // GET: api/classes
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<ClassResponse>>>> GetClasses()
+    public async Task<ActionResult<ApiResponse<List<ClassResponse>>>> GetClasses([FromQuery] int? semesterId = null)
     {
-        // TODO: Get user ID from claims when auth is set up
-        var userId = 1; // Temporary
-        
-        var classes = await _context.Classes
+        var userId = GetUserId();
+        var query = _context.Classes
             .Include(c => c.GradeScale)
-            .Include(c => c.Categories)
-                .ThenInclude(cat => cat.GradeItems)
-            .Include(c => c.Categories)
-                .ThenInclude(cat => cat.Rules)
-            .Where(c => c.UserId == userId)
-            .ToListAsync();
-        
+            .Include(c => c.Categories).ThenInclude(cat => cat.GradeItems)
+            .Include(c => c.Categories).ThenInclude(cat => cat.Rules)
+            .Where(c => c.UserId == userId);
+
+        if (semesterId.HasValue)
+            query = query.Where(c => c.SemesterId == semesterId.Value);
+
+        var classes = await query.ToListAsync();
         var response = classes.Select(MapToClassResponse).ToList();
-        
         return Ok(ApiResponse<List<ClassResponse>>.Ok(response));
     }
     
@@ -58,7 +57,9 @@ public class ClassesController : ControllerBase
         
         if (classEntity == null)
             return NotFound(ApiResponse<ClassResponse>.Fail("Class not found"));
-        
+        if (classEntity.UserId != GetUserId())
+            return Forbid();
+
         return Ok(ApiResponse<ClassResponse>.Ok(MapToClassResponse(classEntity)));
     }
     
@@ -66,15 +67,15 @@ public class ClassesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ApiResponse<ClassResponse>>> CreateClass(CreateClassRequest request)
     {
-        // TODO: Get user ID from claims
-        var userId = 1; // Temporary
+        var userId = GetUserId();
         
         var classEntity = new Class
         {
             UserId = userId,
             Name = request.Name,
-            CreditHours = request.CreditHours,
-            ShowOnlyCAndUp = request.ShowOnlyCAndUp
+            CreditHours = (int)request.CreditHours,
+            ShowOnlyCAndUp = request.ShowOnlyCAndUp,
+            SemesterId = request.SemesterId
         };
         
         // Create default grade scale
@@ -111,7 +112,9 @@ public class ClassesController : ControllerBase
         
         if (classEntity == null)
             return NotFound(ApiResponse<ClassResponse>.Fail("Class not found"));
-        
+        if (classEntity.UserId != GetUserId())
+            return Forbid();
+
         classEntity.Name = request.Name;
         classEntity.CreditHours = request.CreditHours;
         classEntity.ShowOnlyCAndUp = request.ShowOnlyCAndUp;
@@ -130,7 +133,9 @@ public class ClassesController : ControllerBase
         
         if (classEntity == null)
             return NotFound(ApiResponse<bool>.Fail("Class not found"));
-        
+        if (classEntity.UserId != GetUserId())
+            return Forbid();
+
         _context.Classes.Remove(classEntity);
         await _context.SaveChangesAsync();
         
@@ -141,10 +146,14 @@ public class ClassesController : ControllerBase
     [HttpPut("{id}/gradescale")]
     public async Task<ActionResult<ApiResponse<GradeScaleResponse>>> UpdateGradeScale(int id, UpdateGradeScaleRequest request)
     {
-        var gradeScale = await _context.GradeScales.FirstOrDefaultAsync(g => g.ClassId == id);
-        
+        var gradeScale = await _context.GradeScales
+            .Include(g => g.Class)
+            .FirstOrDefaultAsync(g => g.ClassId == id);
+
         if (gradeScale == null)
             return NotFound(ApiResponse<GradeScaleResponse>.Fail("Grade scale not found"));
+        if (gradeScale.Class?.UserId != GetUserId())
+            return Forbid();
         
         gradeScale.APlus = request.APlus;
         gradeScale.A = request.A;
@@ -164,6 +173,9 @@ public class ClassesController : ControllerBase
         return Ok(ApiResponse<GradeScaleResponse>.Ok(MapToGradeScaleResponse(gradeScale)));
     }
     
+    private int GetUserId() =>
+        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+
     private ClassResponse MapToClassResponse(Class c)
     {
         var currentGrade = _gpaCalculator.CalculateClassGrade(c);
@@ -182,6 +194,7 @@ public class ClassesController : ControllerBase
             Name = c.Name,
             CreditHours = c.CreditHours,
             ShowOnlyCAndUp = c.ShowOnlyCAndUp,
+            SemesterId = c.SemesterId,
             CurrentGrade = currentGrade,
             LetterGrade = letterGrade,
             Gpa = gpa,

@@ -9,7 +9,7 @@ const Api = {
         };
         
         // Add auth token if available
-        const token = Storage.getToken();
+        const token = AuthService.getToken();
         if (token) {
             defaultHeaders['Authorization'] = `Bearer ${token}`;
         }

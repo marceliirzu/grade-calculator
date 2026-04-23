@@ -220,7 +220,7 @@ const SyllabusParser = {
 
     _isNoiseLine(name) {
         const noise = [
-            /^total/i, /^grade/i, /^grading/i, /^final\s+grade/i,
+            /^total/i, /^grade[s]?\s*$/i, /^grading/i, /^final\s+grade/i,
             /^course\s+grade/i, /^letter/i, /^percentage/i,
             /^component/i, /^category/i, /^assessment/i,
             /^weight/i, /^evaluation/i, /^the\s/i
@@ -240,11 +240,8 @@ const SyllabusParser = {
         const seen = new Map();
 
         for (const cat of categories) {
-            // Normalize for comparison: lowercase, remove numbers, trim
-            const key = cat.name.toLowerCase()
-                .replace(/\d+/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
+            // Normalize for comparison: case-insensitive exact name match
+            const key = cat.name.toLowerCase().trim();
 
             if (seen.has(key)) {
                 // Combine weights
@@ -265,8 +262,8 @@ const SyllabusParser = {
 
         const total = categories.reduce((sum, c) => sum + c.weight, 0);
 
-        // If total is close to 100 (within 5%), normalize exactly
-        if (total > 0 && Math.abs(total - 100) <= 5) {
+        // If total is close to 100 (within 20%), normalize exactly
+        if (total > 0 && total >= 80 && total <= 120 && total !== 100) {
             const factor = 100 / total;
             return categories.map(c => ({
                 name: c.name,

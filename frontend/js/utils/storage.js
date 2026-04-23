@@ -2,7 +2,7 @@
 const Storage = {
     // Keys
     KEYS: {
-        AUTH_TOKEN: 'gc_auth_token',
+        AUTH_TOKEN: 'gc_token',
         USER: 'gc_user',
         THEME: 'gc_theme'
     },

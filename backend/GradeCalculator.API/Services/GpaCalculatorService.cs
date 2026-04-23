@@ -102,7 +102,45 @@ public class GpaCalculatorService : IGpaCalculatorService
         
         if (totalCreditHours == 0)
             return null;
-        
+
         return totalQualityPoints / totalCreditHours;
+    }
+
+    public decimal? CalculateSemesterGpa(IEnumerable<Class> classes)
+    {
+        // Same logic as CalculateOverallGpa
+        return CalculateOverallGpa(classes);
+    }
+
+    public decimal? CalculateCumulativeGpa(IEnumerable<IEnumerable<Class>> semesterClasses)
+    {
+        decimal totalQualityPoints = 0;
+        int totalCreditHours = 0;
+
+        foreach (var semClasses in semesterClasses)
+        {
+            foreach (var classEntity in semClasses)
+            {
+                var classGpa = CalculateClassGpa(classEntity);
+                if (classGpa.HasValue)
+                {
+                    totalQualityPoints += classGpa.Value * classEntity.CreditHours;
+                    totalCreditHours += classEntity.CreditHours;
+                }
+            }
+        }
+
+        if (totalCreditHours == 0) return null;
+        return Math.Round(totalQualityPoints / totalCreditHours, 2);
+    }
+
+    public decimal? CalculateGpaGoalProgress(decimal? currentGpa, decimal? gpaGoal)
+    {
+        if (!currentGpa.HasValue || !gpaGoal.HasValue || gpaGoal.Value <= 0)
+            return null;
+
+        // Progress as ratio: currentGpa / gpaGoal, capped at 1.0
+        var progress = currentGpa.Value / gpaGoal.Value;
+        return Math.Min(progress, 1.0m);
     }
 }

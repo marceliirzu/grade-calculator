@@ -30,6 +30,7 @@ public class ClassResponse
     public decimal? CurrentGrade { get; set; }
     public string? LetterGrade { get; set; }
     public decimal? Gpa { get; set; }
+    public int? SemesterId { get; set; }
     public List<CategoryResponse> Categories { get; set; } = new();
     public GradeScaleResponse? GradeScale { get; set; }
 }
@@ -123,4 +124,31 @@ public class ParsedGradeScale
     public decimal? DPlus { get; set; }
     public decimal? D { get; set; }
     public decimal? DMinus { get; set; }
+}
+
+public class ChatMessageDto
+{
+    public string Role { get; set; } = string.Empty; // "user" or "assistant"
+    public string Content { get; set; } = string.Empty;
+}
+
+public class SemesterResponse
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int Year { get; set; }
+    public string Term { get; set; } = string.Empty;
+    public decimal? GpaGoal { get; set; }
+    public decimal? SemesterGpa { get; set; }
+    public decimal? CumulativeGpa { get; set; }
+    public decimal? GpaGoalProgress { get; set; } // 0.0-1.0, ratio toward goal
+    public int ClassCount { get; set; }
+    public List<ClassResponse> Classes { get; set; } = new();
+    public DateTime CreatedAt { get; set; }
+}
+
+public class ChatResponse
+{
+    public string Message { get; set; } = string.Empty;
+    public List<ChatMessageDto> UpdatedHistory { get; set; } = new();
 }

@@ -23,4 +23,19 @@ public interface IGpaCalculatorService
     /// Calculates the overall GPA across all classes (weighted by credit hours)
     /// </summary>
     decimal? CalculateOverallGpa(IEnumerable<Class> classes);
+
+    /// <summary>
+    /// Calculates semester GPA weighted by credit hours (same as CalculateOverallGpa but semantically named for semester context)
+    /// </summary>
+    decimal? CalculateSemesterGpa(IEnumerable<Class> classes);
+
+    /// <summary>
+    /// Calculates cumulative GPA across all semesters, weighted by credit hours
+    /// </summary>
+    decimal? CalculateCumulativeGpa(IEnumerable<IEnumerable<Class>> semesterClasses);
+
+    /// <summary>
+    /// Returns progress toward a GPA goal as a 0.0–1.0 ratio (null if no goal)
+    /// </summary>
+    decimal? CalculateGpaGoalProgress(decimal? currentGpa, decimal? gpaGoal);
 }

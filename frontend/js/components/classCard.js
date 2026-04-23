@@ -1,3 +1,13 @@
+function _escHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Class Card Component
 const ClassCard = {
     render(classData) {
@@ -9,7 +19,7 @@ const ClassCard = {
             <div class="card class-card" data-class-id="${classData.id}">
                 <div class="card-header">
                     <div>
-                        <h3 class="card-title">${classData.name}</h3>
+                        <h3 class="card-title">${_escHtml(classData.name)}</h3>
                         <p class="card-subtitle">${classData.creditHours} credit${classData.creditHours !== 1 ? 's' : ''}</p>
                     </div>
                 </div>

@@ -1,4 +1,14 @@
 // Class Detail Page
+function _escHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 const ClassDetailPage = {
     classData: null,
 
@@ -35,7 +45,7 @@ const ClassDetailPage = {
 
                 <header class="class-detail-header">
                     <div class="class-info">
-                        <h1>${this.classData.name}</h1>
+                        <h1>${_escHtml(this.classData.name)}</h1>
                         <p class="class-meta">${this.classData.creditHours} credit hours</p>
                     </div>
                     <div class="class-grade-summary">
@@ -83,11 +93,11 @@ const ClassDetailPage = {
             return `
                 <div class="category-card" data-category-id="${cat.id}">
                     <div class="category-header">
-                        <h3 class="category-name">${cat.name}</h3>
+                        <h3 class="category-name">${_escHtml(cat.name)}</h3>
                         <span class="category-weight">${cat.weight}%</span>
                     </div>
                     <div class="category-body">
-                        <div class="category-grade">${grade}</div>
+                        <div class="category-grade ${cat.currentGrade !== null ? Formatters.gradeColorClass(Formatters.letterGrade(cat.currentGrade)) : ''}">${grade}</div>
                         <div class="category-items">${itemCount} grade${itemCount !== 1 ? 's' : ''}</div>
                     </div>
                     <div class="category-footer">
@@ -177,7 +187,7 @@ const ClassDetailPage = {
             content: `
                 <div class="form-group">
                     <label class="form-label">Class Name</label>
-                    <input type="text" class="form-input" id="editClassName" value="${this.classData.name}">
+                    <input type="text" class="form-input" id="editClassName" value="${_escHtml(this.classData.name)}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Credit Hours</label>
@@ -199,6 +209,10 @@ const ClassDetailPage = {
                 Modal._showToast('Please enter a class name');
                 return;
             }
+            if (isNaN(creditHours) || creditHours < 0.5 || creditHours > 10) {
+                Modal._showToast('Credit hours must be between 0.5 and 10');
+                return;
+            }
 
             try {
                 await ClassService.update(this.classData.id, {
@@ -218,7 +232,7 @@ const ClassDetailPage = {
     async deleteClass() {
         const confirmed = await Modal.confirm({
             title: 'Delete Class',
-            message: `Are you sure you want to delete "${this.classData.name}"? This will delete all categories and grades. This cannot be undone.`,
+            message: `Are you sure you want to delete "${_escHtml(this.classData.name)}"? This will delete all categories and grades. This cannot be undone.`,
             confirmText: 'Delete',
             danger: true
         });

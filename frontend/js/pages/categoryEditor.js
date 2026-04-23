@@ -1,4 +1,14 @@
 // Category Editor Page - Add/edit grades in a category
+function _escHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 const CategoryEditorPage = {
     classData: null,
     categoryData: null,
@@ -40,14 +50,14 @@ const CategoryEditorPage = {
                 <nav class="breadcrumb">
                     <a href="#" id="backToLanding">Classes</a>
                     <span class="breadcrumb-separator">/</span>
-                    <a href="#" id="backToClass">${this.classData.name}</a>
+                    <a href="#" id="backToClass">${_escHtml(this.classData.name)}</a>
                     <span class="breadcrumb-separator">/</span>
-                    <span class="breadcrumb-current">${this.categoryData.name}</span>
+                    <span class="breadcrumb-current">${_escHtml(this.categoryData.name)}</span>
                 </nav>
 
                 <header class="category-header">
                     <div class="category-info">
-                        <h1>${this.categoryData.name}</h1>
+                        <h1>${_escHtml(this.categoryData.name)}</h1>
                         <div class="category-meta">
                             <span>Weight: ${this.categoryData.weight}%</span>
                             <span>&middot;</span>
@@ -99,7 +109,7 @@ const CategoryEditorPage = {
         return `
             <div class="grade-item ${whatIfClass}" data-grade-id="${item.id}">
                 <div class="grade-item-name">
-                    <input type="text" class="name-input" value="${item.name}" placeholder="Grade name">
+                    <input type="text" class="name-input" value="${_escHtml(item.name)}" placeholder="Grade name">
                     ${item.isWhatIf ? '<span class="what-if-badge">What If</span>' : ''}
                 </div>
                 <div class="grade-item-score">
@@ -107,7 +117,7 @@ const CategoryEditorPage = {
                     <span class="divider">/</span>
                     <input type="number" class="possible-input" value="${item.pointsPossible}" step="0.1" min="0.1">
                 </div>
-                <div class="grade-item-percentage">${percentage}</div>
+                <div class="grade-item-percentage ${item.percentage !== null ? Formatters.gradeColorClass(Formatters.letterGrade(item.percentage)) : ''}">${percentage}</div>
                 <div class="grade-item-actions">
                     <button class="btn btn-ghost btn-icon what-if-btn" title="Toggle What-If">&#128302;</button>
                     <button class="btn btn-ghost btn-icon delete-btn" title="Delete">&#128465;</button>
@@ -191,15 +201,13 @@ const CategoryEditorPage = {
         if (!grades || grades.length === 0) return;
 
         try {
-            for (const grade of grades) {
-                await GradeService.create({
-                    categoryId: this.categoryData.id,
-                    name: grade.name,
-                    pointsEarned: grade.pointsEarned,
-                    pointsPossible: grade.pointsPossible,
-                    isWhatIf: false
-                });
-            }
+            await Promise.all(grades.map(grade => GradeService.create({
+                categoryId: this.categoryData.id,
+                name: grade.name,
+                pointsEarned: grade.pointsEarned,
+                pointsPossible: grade.pointsPossible,
+                isWhatIf: false
+            })));
             Modal._showToast(`Imported ${grades.length} grades`);
             await this.refresh();
         } catch (error) {

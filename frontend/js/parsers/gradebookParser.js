@@ -59,6 +59,8 @@ const GradebookParser = {
             // Skip totals and headers that snuck in
             if (this._isSkipRow(name)) continue;
 
+            if (earned === null && possible === null) continue;
+
             grades.push({
                 name: name || `Grade ${grades.length + 1}`,
                 pointsEarned: earned,
@@ -177,7 +179,9 @@ const GradebookParser = {
             /^total/i, /^final\s+grade/i, /^course\s+total/i,
             /^weighted/i, /^cumulative/i, /^overall/i,
             /^current\s+score/i, /^current\s+grade/i,
-            /^unposted/i, /^read\s+state/i
+            /^unposted/i, /^read\s+state/i,
+            /^student$/i, /^sis\s/i, /^integration\s+id$/i, /^section$/i,
+            /^(?:student\s+)?id$/i,
         ];
         return skip.some(p => p.test(name.trim()));
     }

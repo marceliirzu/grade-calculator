@@ -16,8 +16,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("MySQL connection string 'DefaultConnection' not found.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
 // Configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
@@ -32,6 +35,8 @@ builder.Services.AddScoped<IGradeRulesService, GradeRulesService>();
 builder.Services.AddScoped<ISyllabusParserService, SyllabusParserService>();
 builder.Services.AddScoped<IOpenAiService, OpenAiService>();
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
+builder.Services.AddScoped<IGradeAdvisorService, GradeAdvisorService>();
+builder.Services.AddScoped<ITargetGradeCalculatorService, TargetGradeCalculatorService>();
 
 // Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
@@ -61,7 +66,9 @@ builder.Services.AddCors(options =>
                 "http://localhost:5500",
                 "http://127.0.0.1:5500",
                 "https://getyourgpa.com",
-                "https://www.getyourgpa.com"
+                "https://www.getyourgpa.com",
+                "https://calcyourgpa.com",
+                "https://www.calcyourgpa.com"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()

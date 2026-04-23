@@ -1,7 +1,7 @@
 // Authentication Service with Google OAuth
 const AuthService = {
-    tokenKey: 'gc_token',
-    userKey: 'gc_user',
+    tokenKey: Storage.KEYS.AUTH_TOKEN,
+    userKey: Storage.KEYS.USER,
     
     // Initialize Google Sign-In
     initGoogleSignIn() {

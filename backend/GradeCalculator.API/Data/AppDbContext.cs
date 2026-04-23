@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<GradeItem> GradeItems => Set<GradeItem>();
     public DbSet<Rule> Rules => Set<Rule>();
+    public DbSet<Semester> Semesters => Set<Semester>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,16 +26,6 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(u => u.GoogleId).IsUnique();
             entity.HasIndex(u => u.Email).IsUnique();
-            
-            // Seed a default dev user
-            entity.HasData(new User
-            {
-                Id = 1,
-                Email = "dev@gradecalculator.local",
-                Name = "Dev User",
-                GoogleId = "dev-local-user",
-                CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-            });
         });
         
         // Class
@@ -44,7 +35,12 @@ public class AppDbContext : DbContext
                   .WithMany(u => u.Classes)
                   .HasForeignKey(c => c.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
-                  
+
+            entity.HasOne(c => c.Semester)
+                  .WithMany(s => s.Classes)
+                  .HasForeignKey(c => c.SemesterId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasOne(c => c.GradeScale)
                   .WithOne(g => g.Class)
                   .HasForeignKey<GradeScale>(g => g.ClassId)
@@ -80,7 +76,17 @@ public class AppDbContext : DbContext
                   .HasForeignKey(r => r.CategoryId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
-        
+
+        // Semester
+        modelBuilder.Entity<Semester>(entity =>
+        {
+            entity.HasOne(s => s.User)
+                  .WithMany(u => u.Semesters)
+                  .HasForeignKey(s => s.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(s => s.GpaGoal).HasPrecision(3, 2);
+        });
+
         // GradeScale precision
         modelBuilder.Entity<GradeScale>(entity =>
         {

@@ -2,10 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#09090B">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>GPA Calculator</title>
+    <meta name="description" content="Free GPA calculator for college students. Paste your syllabus to auto-detect grading categories, track grades across all classes, and calculate your GPA in real-time.">
+    <meta property="og:title" content="CalcYourGPA - Free GPA & Grade Calculator">
+    <meta property="og:description" content="AI-powered syllabus parsing, smart grade tracking, and real-time GPA calculations. Built for students.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://calcyourgpa.com">
+    <meta name="robots" content="index, follow">
+    <title>CalcYourGPA - Free GPA & Grade Calculator</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236366F1'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-family='monospace' font-weight='bold' font-size='14' fill='white'%3EGPA%3C/text%3E%3C/svg%3E">
 
     <!-- Google Sign-In -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -18,10 +25,12 @@
     <link rel="stylesheet" href="css/components/modals.css">
     <link rel="stylesheet" href="css/components/forms.css">
     <link rel="stylesheet" href="css/components/grade-scale.css">
+    <link rel="stylesheet" href="css/components/grade-advisor.css">
     <link rel="stylesheet" href="css/pages/landing.css">
     <link rel="stylesheet" href="css/pages/class-setup.css">
     <link rel="stylesheet" href="css/pages/class-detail.css">
     <link rel="stylesheet" href="css/pages/category-editor.css">
+    <link rel="stylesheet" href="css/pages/semester.css">
 
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -135,6 +144,7 @@
     </div>
 
     <!-- JavaScript -->
+    <script src="env.js"></script>
     <script src="js/config.js"></script>
     <script src="js/utils/storage.js"></script>
     <script src="js/utils/validation.js"></script>
@@ -147,6 +157,8 @@
     <script src="js/services/categoryService.js"></script>
     <script src="js/services/gradeService.js"></script>
     <script src="js/services/syllabusService.js"></script>
+    <script src="js/services/semesterService.js"></script>
+    <script src="js/services/gradeAdvisorService.js"></script>
     <script src="js/components/modal.js"></script>
     <script src="js/components/classCard.js"></script>
     <script src="js/components/gpaDisplay.js"></script>
@@ -154,10 +166,13 @@
     <script src="js/components/categoryCard.js"></script>
     <script src="js/components/gradeEntry.js"></script>
     <script src="js/components/rulesEditor.js"></script>
+    <script src="js/components/gradeAdvisor.js"></script>
     <script src="js/pages/landing.js"></script>
     <script src="js/pages/classSetup.js"></script>
     <script src="js/pages/classDetail.js"></script>
     <script src="js/pages/categoryEditor.js"></script>
+    <script src="js/pages/semesterList.js"></script>
+    <script src="js/pages/semesterHistory.js"></script>
     <script src="js/app.js"></script>
     <script>
         document.body.classList.add('loaded');
