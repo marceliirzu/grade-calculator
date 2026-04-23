@@ -15,12 +15,37 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("MySQL connection string 'DefaultConnection' not found.");
+// Database — build connection string from Railway MYSQL_* env vars if not explicitly provided
+static string BuildConnectionString(IConfiguration config)
+{
+    var cs = config.GetConnectionString("DefaultConnection");
+
+    // If it's still a placeholder/SQLite/empty, build from individual Railway env vars
+    if (string.IsNullOrWhiteSpace(cs) || cs.StartsWith("Data Source=") || cs.Contains("SET_MYSQL"))
+    {
+        var host = Environment.GetEnvironmentVariable("MYSQLHOST")
+                   ?? Environment.GetEnvironmentVariable("MYSQL_HOST");
+        var port = Environment.GetEnvironmentVariable("MYSQLPORT")
+                   ?? Environment.GetEnvironmentVariable("MYSQL_PORT") ?? "3306";
+        var db   = Environment.GetEnvironmentVariable("MYSQLDATABASE")
+                   ?? Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? "gradecalculator";
+        var user = Environment.GetEnvironmentVariable("MYSQLUSER")
+                   ?? Environment.GetEnvironmentVariable("MYSQL_USER");
+        var pwd  = Environment.GetEnvironmentVariable("MYSQLPASSWORD")
+                   ?? Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
+
+        if (host != null && user != null && pwd != null)
+            return $"Server={host};Port={port};Database={db};Uid={user};Pwd={pwd};";
+    }
+
+    return cs ?? throw new InvalidOperationException("No MySQL connection string found.");
+}
+
+var connectionString = BuildConnectionString(builder.Configuration);
+var serverVersion = new MySqlServerVersion(new Version(8, 0, 0));
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, serverVersion));
 
 // Configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
