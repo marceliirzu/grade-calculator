@@ -7,7 +7,12 @@ const App = {
         Modal.init();
         CONFIG.loadAPlusValue();
         this.updateAuthUI();
-        this.navigate('semesterList');
+        // Logged-out visitors land on the marketing hero; members go to their semesters.
+        if (AuthService.isLoggedIn()) {
+            this.navigate('semesterList');
+        } else {
+            this.navigate('landing');
+        }
     },
 
     updateAuthUI() {
@@ -17,13 +22,13 @@ const App = {
         const isLoggedIn = AuthService.isLoggedIn();
         userMenu.innerHTML = `
             <div class="aplus-toggle" id="aplusToggle" title="Toggle A+ value">
-                <span class="toggle-label">A+</span>
+                <span class="toggle-label">A+ scale</span>
                 <span class="toggle-value">${currentAPlusValue === 4.33 ? '4.33' : '4.0'}</span>
             </div>
             ${isLoggedIn ? `
-                <button class="btn btn-secondary btn-sm" id="semestersBtn" style="font-size:0.75rem;padding:4px 10px;">Semesters</button>
-                <button class="btn btn-secondary btn-sm" id="historyBtn" style="font-size:0.75rem;padding:4px 10px;">History</button>
-                <button class="btn btn-secondary btn-sm" id="logoutBtn" style="font-size:0.75rem;padding:4px 10px;">Sign out</button>
+                <button class="btn btn-secondary btn-sm" id="semestersBtn">Semesters</button>
+                <button class="btn btn-secondary btn-sm" id="historyBtn">History</button>
+                <button class="btn btn-secondary btn-sm" id="logoutBtn">Sign out</button>
             ` : ''}
         `;
 
@@ -55,13 +60,18 @@ const App = {
 
         // Logo click goes home
         document.getElementById('logoContainer')?.addEventListener('click', () => {
-            this.navigate('landing');
+            this.navigate(AuthService.isLoggedIn() ? 'semesterList' : 'landing');
         });
     },
 
     navigate(page, params = {}) {
         this.currentPage = page;
         this.currentParams = params;
+
+        // The marketing hero hides the app header; every other view shows it.
+        if (page !== 'landing' || AuthService.isLoggedIn()) {
+            document.querySelector('.header')?.classList.remove('hidden');
+        }
 
         switch (page) {
             case 'landing':

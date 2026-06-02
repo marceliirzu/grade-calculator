@@ -39,24 +39,47 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   gap: var(--spacing-4);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-4) var(--spacing-6);
+  background: linear-gradient(150deg, var(--color-primary-dark), var(--color-primary));
+  border: none;
+  border-radius: var(--radius-2xl);
+  padding: var(--spacing-6) var(--spacing-8);
   margin-bottom: var(--spacing-6);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-glow);
+}
+
+.cumulative-gpa-banner::after {
+  content: '';
+  position: absolute;
+  right: -40px; top: -60px;
+  width: 240px; height: 240px;
+  background: radial-gradient(circle, var(--color-accent-light), transparent 70%);
+  opacity: 0.4;
+  filter: blur(20px);
+  pointer-events: none;
 }
 
 .cumulative-label {
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
+  font-family: var(--font-family-mono);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  position: relative;
 }
 
 .cumulative-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  line-height: 1;
+  font-family: var(--font-family-serif);
+  font-size: clamp(3rem, 7vw, 4.5rem);
+  font-weight: 400;
+  color: #fff !important;
+  line-height: 0.9;
+  position: relative;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ----------------------------------------------------------
@@ -76,20 +99,22 @@
 .semester-card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-4);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-5);
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-spring), border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .semester-card:hover {
-  background: var(--color-bg-elevated);
-  border-color: var(--color-primary);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+  border-color: var(--color-border-light);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-5px);
 }
 
 .semester-card--active {
-  border-color: var(--color-primary);
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-glow);
 }
 
 /* ----------------------------------------------------------
@@ -107,7 +132,8 @@
 .semester-name {
   font-weight: 600;
   color: var(--color-text-primary);
-  font-size: 1rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
 }
 
 .semester-meta {
@@ -117,11 +143,14 @@
 }
 
 .semester-gpa {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-family: var(--font-family-serif);
+  font-size: 2.6rem;
+  font-weight: 400;
   color: var(--color-text-primary);
   text-align: right;
   white-space: nowrap;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ----------------------------------------------------------
@@ -138,17 +167,17 @@
 
 .goal-bar-track {
   flex: 1;
-  height: 6px;
-  background: var(--color-bg-elevated);
+  height: 8px;
+  background: var(--color-bg-tertiary);
   border-radius: 9999px;
   overflow: hidden;
 }
 
 .goal-bar-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: linear-gradient(90deg, var(--color-primary-light), var(--color-accent));
   border-radius: 9999px;
-  transition: width 0.4s ease;
+  transition: width var(--transition-spring-lg);
 }
 
 .goal-label {
@@ -371,7 +400,7 @@
 }
 
 .history-table-row:hover {
-  background: var(--color-bg-elevated);
+  background: var(--color-bg-secondary);
 }
 
 .history-sem-name {
@@ -402,7 +431,7 @@
 .gpa-semester-section {
   margin-top: var(--spacing-4);
   padding-top: var(--spacing-4);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 /* ----------------------------------------------------------
@@ -418,21 +447,21 @@
 
 .gpa-goal-label {
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .gpa-goal-track {
-  height: 6px;
-  background: var(--color-bg-elevated);
+  height: 8px;
+  background: rgba(255, 255, 255, 0.22);
   border-radius: 9999px;
   overflow: hidden;
 }
 
 .gpa-goal-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: var(--color-accent-light);
   border-radius: 9999px;
-  transition: width 0.4s ease;
+  transition: width var(--transition-spring-lg);
 }
 
 .gpa-goal-fill.gpa-goal-green {
@@ -449,7 +478,7 @@
 
 .gpa-goal-pct {
   font-size: 0.75rem;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.7);
   text-align: right;
 }
 

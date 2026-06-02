@@ -1,47 +1,48 @@
-/* Forms - 21st.dev Refined Style */
+/* CalcYourGPA — Forms (light) */
 
-.form-group {
-    margin-bottom: var(--spacing-4);
-}
+.form-group { margin-bottom: var(--spacing-4); }
 
 .form-label {
     display: block;
     font-size: var(--font-size-sm);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-text-secondary);
     margin-bottom: var(--spacing-1-5);
+}
+
+.form-label-hint, .form-label .form-label-hint {
+    font-weight: 400;
+    color: var(--color-text-muted);
 }
 
 .form-input,
 .form-select,
 select.form-input {
     width: 100%;
-    padding: var(--spacing-2-5) var(--spacing-3);
-    font-size: var(--font-size-sm);
+    padding: var(--spacing-3) var(--spacing-3);
+    font-size: var(--font-size-base);
     font-family: var(--font-family);
     color: var(--color-text-primary);
     background: var(--color-bg-input);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    transition: all var(--transition-fast);
-    height: 40px;
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    height: 44px;
     outline: none;
 }
 
 .form-input:focus,
 .form-select:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 4px var(--color-primary-subtle);
 }
 
-.form-input::placeholder {
-    color: var(--color-text-muted);
-}
+.form-input::placeholder { color: var(--color-text-muted); }
 
 /* Select */
 select.form-input {
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239A9AA8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right var(--spacing-3) center;
     padding-right: var(--spacing-10);
@@ -55,10 +56,7 @@ textarea.form-input {
 }
 
 /* Input Group */
-.input-group {
-    display: flex;
-    align-items: center;
-}
+.input-group { display: flex; align-items: center; }
 
 .input-group .form-input {
     flex: 1;
@@ -68,13 +66,13 @@ textarea.form-input {
 
 .input-group-append {
     padding: var(--spacing-2-5) var(--spacing-3);
-    background: var(--glass-bg);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-light);
     border-left: none;
-    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-    color: var(--color-text-muted);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
-    height: 40px;
+    height: 44px;
     display: flex;
     align-items: center;
 }
@@ -90,9 +88,7 @@ textarea.form-input {
     transition: background var(--transition-fast);
 }
 
-.form-check:hover {
-    background: var(--glass-bg);
-}
+.form-check:hover { background: var(--color-bg-secondary); }
 
 .form-check-input {
     width: 18px;
@@ -115,14 +111,20 @@ textarea.form-input {
     margin-top: var(--spacing-1);
 }
 
-/* Inline Form */
+/* Inline / Row */
 .form-inline {
     display: flex;
     gap: var(--spacing-3);
     align-items: flex-end;
 }
-
 .form-inline .form-group { margin-bottom: 0; flex: 1; }
+
+.form-row {
+    display: flex;
+    gap: var(--spacing-3);
+    align-items: flex-start;
+}
+.form-row > * { flex: 1; }
 
 /* Validation */
 .form-input.is-invalid { border-color: var(--color-danger); }
@@ -136,4 +138,5 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 
 @media (max-width: 768px) {
     .form-inline { flex-direction: column; align-items: stretch; }
+    .form-row { flex-direction: column; }
 }

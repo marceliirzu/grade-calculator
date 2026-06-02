@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#09090B">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="Free GPA calculator for college students. Paste your syllabus to auto-detect grading categories, track grades across all classes, and calculate your GPA in real-time.">
+    <meta name="theme-color" content="#F7F7FA">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="description" content="Free GPA calculator for college students. Paste your syllabus to auto-detect grading categories, track grades across all classes, and calculate your GPA in real time.">
     <meta property="og:title" content="CalcYourGPA - Free GPA & Grade Calculator">
-    <meta property="og:description" content="AI-powered syllabus parsing, smart grade tracking, and real-time GPA calculations. Built for students.">
+    <meta property="og:description" content="Paste a syllabus to auto-detect grading categories, track every class, and watch your GPA update in real time. Built for students.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://calcyourgpa.com">
     <meta name="robots" content="index, follow">
     <title>CalcYourGPA - Free GPA & Grade Calculator</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236366F1'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-family='monospace' font-weight='bold' font-size='14' fill='white'%3EGPA%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235249E0'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='central' text-anchor='middle' font-family='monospace' font-weight='bold' font-size='12' fill='white'%3EGPA%3C/text%3E%3C/svg%3E">
 
     <!-- Google Sign-In -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Fonts: Instrument Serif (display) + Schibsted Grotesk (UI) + JetBrains Mono (data) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/variables.css">
@@ -32,11 +37,6 @@
     <link rel="stylesheet" href="css/pages/category-editor.css">
     <link rel="stylesheet" href="css/pages/semester.css">
 
-    <!-- Google Fonts - Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-
     <style>
         body { opacity: 0; transition: opacity 0.3s ease; }
         body.loaded { opacity: 1; }
@@ -45,7 +45,7 @@
         .logo-container {
             display: flex;
             align-items: center;
-            gap: var(--spacing-2);
+            gap: var(--spacing-2-5);
             cursor: pointer;
             text-decoration: none;
         }
@@ -54,10 +54,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
-            border-radius: var(--radius-lg);
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(140deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
             position: relative;
         }
 
@@ -70,7 +71,7 @@
         }
 
         .logo-text {
-            font-size: var(--font-size-sm);
+            font-size: var(--font-size-lg);
             font-weight: 600;
             color: var(--color-text-primary);
             letter-spacing: -0.02em;
@@ -78,44 +79,43 @@
 
         .logo-text-muted {
             color: var(--color-text-muted);
-            font-weight: 400;
+            font-weight: 500;
         }
 
         /* A+ Toggle */
         .aplus-toggle {
             display: flex;
             align-items: center;
-            gap: var(--spacing-1-5);
-            padding: var(--spacing-1-5) var(--spacing-2-5);
-            background: var(--glass-bg);
+            gap: var(--spacing-2);
+            padding: var(--spacing-1-5) var(--spacing-2) var(--spacing-1-5) var(--spacing-3);
+            background: var(--color-bg-card);
             border-radius: var(--radius-full);
-            font-size: var(--font-size-xs);
-            color: var(--color-text-muted);
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
             cursor: pointer;
-            transition: all var(--transition-fast);
+            transition: all var(--transition-spring);
             border: 1px solid var(--color-border);
+            box-shadow: var(--shadow-xs);
         }
 
         .aplus-toggle:hover {
-            background: var(--color-bg-glass-hover);
             border-color: var(--color-border-light);
+            box-shadow: var(--shadow-sm);
         }
+        .aplus-toggle:active { transform: scale(0.96); }
 
         .aplus-toggle .toggle-label {
-            font-weight: 600;
-            color: var(--color-primary);
-            font-family: var(--font-family-mono);
+            font-weight: 500;
         }
 
         .aplus-toggle .toggle-value {
             background: var(--color-primary-subtle);
             color: var(--color-primary);
-            padding: 1px 6px;
+            padding: 2px 9px;
             border-radius: var(--radius-full);
             font-weight: 600;
             font-family: var(--font-family-mono);
-            font-size: 11px;
-            border: 1px solid rgba(129, 140, 248, 0.15);
+            font-size: 12px;
         }
     </style>
 </head>
@@ -128,7 +128,7 @@
                     <div class="logo-mark">
                         <span class="logo-mark-text" id="logoMarkText">GPA</span>
                     </div>
-                    <span class="logo-text">GPA <span class="logo-text-muted">Calculator</span></span>
+                    <span class="logo-text"><b>Calc</b>Your<b>GPA</b></span>
                 </div>
                 <div class="user-menu" id="userMenu">
                     <!-- A+ Toggle loads here -->

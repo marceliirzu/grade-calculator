@@ -1,18 +1,15 @@
-/* Cards - 21st.dev Glass Morphism Style */
+/* CalcYourGPA — Cards (light / premium) */
 
 .card {
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-2xl);
+    border-radius: var(--radius-xl);
     padding: var(--spacing-5);
-    transition: all var(--transition-normal);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-spring), box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 
-.card:hover {
-    border-color: var(--color-border-light);
-}
+.card:hover { border-color: var(--color-border-light); }
 
 .card-header { margin-bottom: var(--spacing-4); }
 
@@ -33,7 +30,7 @@
 .class-card {
     cursor: pointer;
     padding: var(--spacing-5);
-    min-height: 180px;
+    min-height: 168px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -42,25 +39,22 @@
     overflow: hidden;
 }
 
-/* Subtle gradient accent on top */
 .class-card::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
+    top: 0; left: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-accent) 100%);
     opacity: 0;
     transition: opacity var(--transition-normal);
 }
 
 .class-card:hover {
     border-color: var(--color-border-light);
-    transform: translateY(-2px);
+    transform: translateY(-5px);
     box-shadow: var(--shadow-lg);
 }
-
+.class-card:active { transform: translateY(-2px) scale(0.99); }
 .class-card:hover::before { opacity: 1; }
 
 .class-card .card-title {
@@ -77,70 +71,76 @@
 }
 
 .grade-display .letter-grade {
-    font-size: var(--font-size-4xl);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.02em;
+    font-family: var(--font-family-serif);
+    font-size: 2.9rem;
+    font-weight: 400;
+    line-height: 0.9;
+    letter-spacing: -0.01em;
 }
 
 .grade-display .percentage {
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
     font-weight: 500;
 }
 
-/* ==================== GPA Card ==================== */
+/* ==================== GPA Card (indigo hero) ==================== */
 .gpa-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
+    background: linear-gradient(165deg, var(--color-primary-dark), var(--color-primary));
+    border: none;
     border-radius: var(--radius-2xl);
     padding: var(--spacing-6);
-    backdrop-filter: blur(var(--glass-blur));
+    color: #fff;
     position: relative;
     overflow: hidden;
+    box-shadow: var(--shadow-glow);
 }
 
-/* Accent glow */
 .gpa-card::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle at 30% 30%, rgba(129, 140, 248, 0.06), transparent 50%);
+    right: -40px; bottom: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, var(--color-accent-light), transparent 70%);
+    opacity: 0.4;
+    filter: blur(16px);
     pointer-events: none;
 }
 
 .gpa-card-title {
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--color-text-muted);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.82);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.18em;
     margin-bottom: var(--spacing-3);
     position: relative;
 }
 
 .gpa-value {
-    font-size: var(--font-size-5xl);
-    font-weight: 700;
-    color: var(--color-text-primary);
-    line-height: 1;
-    letter-spacing: -0.03em;
+    font-family: var(--font-family-serif);
+    font-size: 4.4rem;
+    font-weight: 400;
+    color: #fff;
+    line-height: 0.92;
+    letter-spacing: -0.02em;
     position: relative;
+    font-variant-numeric: tabular-nums;
 }
 
 .gpa-value .gpa-scale {
-    font-size: var(--font-size-lg);
-    color: var(--color-text-muted);
+    font-family: var(--font-family);
+    font-size: var(--font-size-xl);
+    color: rgba(255, 255, 255, 0.6);
     font-weight: 400;
 }
 
 .gpa-details {
     margin-top: var(--spacing-5);
     padding-top: var(--spacing-4);
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
     position: relative;
 }
 
@@ -149,13 +149,14 @@
     justify-content: space-between;
     padding: var(--spacing-1-5) 0;
     font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
+    color: rgba(255, 255, 255, 0.86);
 }
+.gpa-detail-row small { color: rgba(255, 255, 255, 0.65); }
 
 .class-summary-list {
     margin-top: var(--spacing-4);
     padding-top: var(--spacing-4);
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
     position: relative;
 }
 
@@ -167,34 +168,40 @@
     font-size: var(--font-size-sm);
 }
 
-.class-summary-name {
-    color: var(--color-text-secondary);
-}
+.class-summary-name { color: rgba(255, 255, 255, 0.86); }
 
 .class-summary-grade {
-    font-weight: 600;
-    font-size: var(--font-size-xs);
-    padding: var(--spacing-0-5) var(--spacing-2);
-    border-radius: var(--radius-full);
-    background: var(--glass-bg);
+    font-family: var(--font-family-serif);
+    font-weight: 400;
+    font-size: var(--font-size-xl);
+    padding: 0;
+    background: transparent;
+    color: #fff;
 }
+/* keep grade hues legible on the indigo hero */
+.gpa-card .class-summary-grade.grade-a { color: #6EE7B7 !important; }
+.gpa-card .class-summary-grade.grade-b { color: #BFD3FF !important; }
+.gpa-card .class-summary-grade.grade-c { color: #FCE08A !important; }
+.gpa-card .class-summary-grade.grade-d { color: #FFC59B !important; }
+.gpa-card .class-summary-grade.grade-f { color: #FFB4B6 !important; }
 
 /* ==================== Category Card ==================== */
 .category-card {
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-2xl);
+    border-radius: var(--radius-xl);
     padding: var(--spacing-5);
     cursor: pointer;
-    transition: all var(--transition-normal);
-    backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-spring), box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 
 .category-card:hover {
     border-color: var(--color-border-light);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
 }
+.category-card:active { transform: translateY(-1px) scale(0.99); }
 
 .category-card .category-header {
     display: flex;
@@ -215,21 +222,21 @@
     color: var(--color-primary);
     padding: var(--spacing-1) var(--spacing-2-5);
     border-radius: var(--radius-full);
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     font-weight: 600;
-    border: 1px solid rgba(129, 140, 248, 0.15);
+    border: 1px solid #E5E8FF;
 }
 
-.category-card .category-body {
-    margin-bottom: var(--spacing-3);
-}
+.category-card .category-body { margin-bottom: var(--spacing-3); }
 
 .category-card .category-grade {
-    font-size: var(--font-size-3xl);
-    font-weight: 700;
+    font-family: var(--font-family-serif);
+    font-size: 2.4rem;
+    font-weight: 400;
     color: var(--color-text-primary);
-    letter-spacing: -0.02em;
-    line-height: 1.2;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
 }
 
 .category-card .category-items {
@@ -245,10 +252,9 @@
 
 .category-card .click-hint {
     font-size: var(--font-size-xs);
+    font-weight: 600;
     color: var(--color-text-muted);
     transition: color var(--transition-fast);
 }
 
-.category-card:hover .click-hint {
-    color: var(--color-primary);
-}
+.category-card:hover .click-hint { color: var(--color-primary); }

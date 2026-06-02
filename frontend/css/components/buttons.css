@@ -1,4 +1,4 @@
-/* Buttons - 21st.dev Modern Style */
+/* CalcYourGPA — Buttons (light / springy) */
 
 .btn {
     display: inline-flex;
@@ -7,13 +7,13 @@
     gap: var(--spacing-2);
     font-family: var(--font-family);
     font-size: var(--font-size-sm);
-    font-weight: 500;
+    font-weight: 600;
     padding: var(--spacing-2-5) var(--spacing-4);
-    height: 36px;
-    border-radius: var(--radius-lg);
+    height: 38px;
+    border-radius: var(--radius-full);
     border: 1px solid transparent;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: transform var(--transition-spring), box-shadow var(--transition-normal), background var(--transition-normal), color var(--transition-normal), border-color var(--transition-normal);
     text-decoration: none;
     white-space: nowrap;
     touch-action: manipulation;
@@ -23,80 +23,74 @@
     letter-spacing: -0.01em;
 }
 
+.btn:active { transform: scale(0.95); }
+
 .btn:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
-/* Primary Button */
+/* Primary */
 .btn-primary {
-    background: var(--color-primary-dark);
+    background: linear-gradient(180deg, var(--color-primary-light), var(--color-primary));
     color: white;
     border-color: transparent;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
-
 .btn-primary:hover {
-    background: var(--color-primary);
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 22px 44px -16px var(--color-primary-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
+.btn-primary:active { transform: scale(0.96); box-shadow: var(--shadow-sm); }
 
-.btn-primary:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* Secondary Button */
+/* Secondary */
 .btn-secondary {
-    background: var(--glass-bg);
-    color: var(--color-text-secondary);
+    background: var(--color-bg-card);
+    color: var(--color-text-primary);
     border-color: var(--color-border-light);
-    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-xs);
 }
-
 .btn-secondary:hover {
-    background: var(--color-bg-glass-hover);
     color: var(--color-text-primary);
     border-color: var(--color-zinc-600);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
 }
 
-/* Accent Button */
+/* Accent */
 .btn-accent {
-    background: var(--color-accent-dark);
-    color: var(--color-text-inverse);
+    background: linear-gradient(180deg, var(--color-accent-light), var(--color-accent));
+    color: white;
     border-color: transparent;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    box-shadow: var(--shadow-glow-accent), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
-
 .btn-accent:hover {
-    background: var(--color-accent);
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 22px 44px -16px var(--color-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-/* Danger Button */
+/* Danger */
 .btn-danger {
-    background: rgba(248, 113, 113, 0.1);
+    background: var(--color-bg-card);
     color: var(--color-danger);
-    border-color: rgba(248, 113, 113, 0.2);
+    border-color: var(--color-border-light);
+    box-shadow: var(--shadow-xs);
 }
-
 .btn-danger:hover {
-    background: rgba(248, 113, 113, 0.2);
-    border-color: rgba(248, 113, 113, 0.3);
+    background: var(--color-danger-bg);
+    border-color: rgba(229, 72, 77, 0.35);
 }
 
-/* Ghost Button */
+/* Ghost */
 .btn-ghost {
     background: transparent;
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
     padding: var(--spacing-2);
     height: auto;
     min-height: auto;
     border-radius: var(--radius-md);
+    box-shadow: none;
 }
-
 .btn-ghost:hover {
     background: var(--color-bg-glass-hover);
     color: var(--color-text-primary);
@@ -106,88 +100,82 @@
 .btn-sm {
     font-size: var(--font-size-xs);
     padding: var(--spacing-1-5) var(--spacing-3);
-    height: 30px;
-    border-radius: var(--radius-md);
+    height: 32px;
 }
-
 .btn-lg {
     font-size: var(--font-size-base);
     padding: var(--spacing-3) var(--spacing-6);
-    height: 42px;
+    height: 44px;
 }
-
 .btn-xl {
     font-size: var(--font-size-lg);
     padding: var(--spacing-4) var(--spacing-8);
-    height: 48px;
-    border-radius: var(--radius-xl);
+    height: 50px;
 }
 
-/* Full Width */
 .btn-block { width: 100%; }
 
-/* Icon Button */
 .btn-icon {
     padding: var(--spacing-2);
-    min-width: 36px;
-    min-height: 36px;
-    height: 36px;
+    min-width: 38px;
+    min-height: 38px;
+    height: 38px;
     border-radius: var(--radius-md);
 }
 
-/* Add Class Button */
+/* Add Card Button */
 .btn-add {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: var(--spacing-3);
-    background: var(--glass-bg);
-    border: 1px dashed var(--color-border-light);
+    background: transparent;
+    border: 1.5px dashed var(--color-border-light);
     color: var(--color-text-muted);
     padding: var(--spacing-8);
     min-height: 180px;
     border-radius: var(--radius-2xl);
-    transition: all var(--transition-normal);
+    transition: all var(--transition-spring);
     width: 100%;
     font-size: var(--font-size-sm);
+    font-weight: 600;
     cursor: pointer;
 }
-
 .btn-add:hover {
-    border-color: var(--color-primary);
+    border-color: var(--color-primary-light);
     color: var(--color-primary);
     background: var(--color-primary-subtle);
     border-style: solid;
+    transform: translateY(-3px);
 }
-
 .btn-add .plus-icon {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 300;
     line-height: 1;
-    opacity: 0.6;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-xs);
+    transition: transform var(--transition-spring);
 }
-
-.btn-add:hover .plus-icon { opacity: 1; }
+.btn-add:hover .plus-icon { transform: rotate(90deg) scale(1.08); }
 
 /* Disabled */
 .btn:disabled, .btn[disabled] {
-    opacity: 0.4;
+    opacity: 0.45;
     cursor: not-allowed;
     pointer-events: none;
     transform: none !important;
 }
 
-/* Button Group */
-.btn-group {
-    display: flex;
-    gap: var(--spacing-2);
-}
+.btn-group { display: flex; gap: var(--spacing-2); }
 
-/* Responsive */
 @media (max-width: 768px) {
-    .btn-lg { height: 40px; }
-    .btn-xl { height: 44px; }
     .btn-group { flex-direction: column; }
     .btn-group .btn { width: 100%; }
 }
