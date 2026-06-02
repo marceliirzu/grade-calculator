@@ -3,7 +3,6 @@ const LandingPage = {
     classes: [],
     currentSemesterId: null,
     currentSemester: null,
-    _calc: null,
 
     async init(params = {}) {
         const semesterId = params.semesterId || SemesterService.getCurrentSemesterId();
@@ -14,7 +13,6 @@ const LandingPage = {
             return;
         }
 
-        // Show loading skeleton
         const mainContent = document.getElementById('mainContent');
         mainContent.innerHTML = `
     <div class="landing-page">
@@ -40,92 +38,120 @@ const LandingPage = {
     },
 
     // ============================================================
-    //  Logged-out marketing page — flashy hero + live calculator
+    //  Logged-out marketing page — CHUNKY, full-bleed colored bands
     // ============================================================
     renderLoginPrompt() {
         document.querySelector('.header')?.classList.add('hidden');
         const mainContent = document.getElementById('mainContent');
 
-        const ck = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-        const arrow = `<svg class="lp-arrow" width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        const ck = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        const arrow = `<svg class="lp-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
         mainContent.innerHTML = `
         <div class="lp" id="lp">
-            <div class="lp-aurora"><span></span><span></span><span></span></div>
-
-            <nav class="lp-nav">
-                <div class="logo-container">
-                    <div class="logo-mark"><span class="logo-mark-text">GPA</span></div>
-                    <span class="logo-text"><b>Calc</b>Your<b>GPA</b></span>
-                </div>
-                <div class="lp-nav-cta">
-                    <button class="btn btn-secondary" id="comingSoonBtn">Sign in</button>
-                    <button class="btn btn-primary" id="devLoginBtn">Open app ${arrow}</button>
-                </div>
-            </nav>
-
-            <header class="lp-hero">
-                <div class="lp-badge">Built for students who sweat the decimals <span class="lp-pill">v2.0</span></div>
-                <h1 class="lp-title">Know your grade <em class="lp-mk">before</em> the curve.</h1>
-                <p class="lp-sub">Paste a syllabus and CalcYourGPA reads the grading breakdown for you, then tracks every class, every category, and your live GPA in real time.</p>
-                <div class="lp-actions">
-                    <button class="btn btn-primary btn-xl" id="devLoginBtn2">Start tracking free ${arrow}</button>
-                    <button class="btn btn-secondary btn-xl" id="comingSoonBtn2">Sign in with Google</button>
-                </div>
-                <div class="lp-note"><span class="lp-ck">${ck}</span> No credit card · Your grades stay on your device</div>
-            </header>
-
-            <div class="lp-stage">
-                <div class="lp-window">
-                    <div class="lp-winbar">
-                        <span class="lp-dots"><i></i><i></i><i></i></span>
-                        <span class="lp-url">calcyourgpa.app/fall-2025</span>
-                        <span class="lp-live"><i></i> live</span>
-                    </div>
-                    ${this.renderCalc()}
-                </div>
-                <div class="lp-float lp-float-1"><span class="lp-fic lp-fic-green">${this._icon('spark')}</span><span><small>Syllabus parsed</small><b>4 categories found</b></span></div>
-                <div class="lp-float lp-float-2"><span class="lp-fic lp-fic-indigo">${this._icon('target')}</span><span><small>On track for</small><b style="color:var(--color-accent-dark)">Dean's List</b></span></div>
-                <div class="lp-float lp-float-3"><span class="lp-fic lp-fic-amber">${this._icon('bolt')}</span><span><small>Tap a grade</small><b>it recalculates</b></span></div>
+            <!-- drifting space stickers -->
+            <div class="lp-orbits" aria-hidden="true">
+                <div class="lp-sticker lp-st-1"><b>4.33</b><span>scale</span></div>
+                <div class="lp-sticker lp-st-2">${this._icon('star')}</div>
+                <div class="lp-sticker lp-st-3">A+</div>
+                <div class="lp-ring-orbit lp-st-4"></div>
             </div>
 
-            <section class="lp-features">
-                <div class="lp-feat-head">
-                    <span class="eyebrow">Everything in one place</span>
-                    <h2>Grades are messy. Your <em>GPA</em> shouldn't be.</h2>
-                    <p>From the first quiz to the final curve, CalcYourGPA does the weighting, the rounding, and the math you'd rather not do at 2am.</p>
+            <!-- ====== BAND 1 — HERO (cream) ====== -->
+            <section class="lp-band lp-hero-band">
+                <nav class="lp-nav">
+                    <div class="lp-logo">
+                        <div class="lp-logo-mark">GPA</div>
+                        <span class="lp-logo-name"><b>Calc</b>Your<b>GPA</b></span>
+                    </div>
+                    <div class="lp-nav-cta">
+                        <button class="lp-btn lp-btn-line" id="comingSoonBtn">Sign in</button>
+                        <button class="lp-btn lp-btn-dark" id="devLoginBtn">Open app ${arrow}</button>
+                    </div>
+                </nav>
+
+                <div class="lp-hero">
+                    <div class="lp-badge"><span class="lp-badge-dot"></span> Built for students who sweat the decimals <span class="lp-pill">v2.0</span></div>
+                    <h1 class="lp-title">Know your grade <em class="lp-mk">before</em> the curve.</h1>
+                    <p class="lp-sub">Paste a syllabus and CalcYourGPA reads the grading breakdown for you, then tracks every class, every category, and your live GPA in real time.</p>
+                    <div class="lp-actions">
+                        <button class="lp-btn lp-btn-big lp-btn-indigo" id="devLoginBtn2">Start tracking free ${arrow}</button>
+                        <button class="lp-btn lp-btn-big lp-btn-line" id="comingSoonBtn2">Sign in with Google</button>
+                    </div>
+                    <div class="lp-note"><span class="lp-note-ck">${ck}</span> No credit card · Your grades stay on your device</div>
                 </div>
-                <div class="lp-feat-grid">
-                    ${this._featureCard('doc', 'Paste your syllabus', 'Our parser pulls out every category and weight automatically. No manual data entry, no spreadsheet.', ['Detects categories &amp; weights', 'Reads the letter-grade scale', 'Editable before you confirm'])}
-                    ${this._featureCard('bolt', 'Simulate any grade', 'Slide a hypothetical score onto any assignment and watch your class grade and GPA move instantly.', ['Live recalculation', '"What do I need?" targets'])}
-                    ${this._featureCard('chart', 'Every semester, one number', 'Track each class, roll it into a semester GPA, and watch your cumulative GPA build over your whole degree.', ['Semester &amp; cumulative GPA', 'Goal tracking with progress', 'A+ / 4.33 scale toggle'])}
-                </div>
+                ${this._zig('var(--lp-cream)', 'lp-zig-down')}
             </section>
 
-            <section class="lp-steps-wrap">
-                <div class="lp-feat-head">
-                    <span class="eyebrow">Three steps</span>
-                    <h2>From syllabus to certainty.</h2>
+            <!-- ====== BAND 2 — SPACE / CALCULATOR (deep indigo) ====== -->
+            <section class="lp-band lp-space-band">
+                <div class="lp-stars" aria-hidden="true"></div>
+                <div class="lp-band-inner">
+                    <div class="lp-kicker lp-kicker-light">${this._icon('bolt')} Live · tap to play</div>
+                    <h2 class="lp-band-title lp-title-light">A calculator that <em>actually</em> calculates.</h2>
+                    <div class="lp-window">
+                        <div class="lp-winbar">
+                            <span class="lp-dots"><i></i><i></i><i></i></span>
+                            <span class="lp-url">calcyourgpa.app/fall-2025</span>
+                            <span class="lp-live"><i></i> live</span>
+                        </div>
+                        ${this.renderCalc()}
+                    </div>
+                    <div class="lp-chip-row">
+                        <div class="lp-chip"><span class="lp-chip-ic lp-chip-green">${this._icon('spark')}</span> Syllabus parsed · 4 categories</div>
+                        <div class="lp-chip"><span class="lp-chip-ic lp-chip-amber">${this._icon('target')}</span> On track for Dean's List</div>
+                    </div>
                 </div>
-                <div class="lp-steps">
-                    ${this._step('01', 'Add your classes', 'Paste a syllabus or set up categories by hand. About a minute per class.')}
-                    ${this._step('02', 'Log your grades', 'Enter scores as you get them, or import straight from Canvas and Blackboard.')}
-                    ${this._step('03', 'Watch it add up', 'Your class grades and GPA update live, and what-if mode plans the rest.')}
-                </div>
+                ${this._zig('var(--lp-indigo)', 'lp-zig-down')}
             </section>
 
-            <section class="lp-cta">
-                <div class="lp-cta-card">
-                    <h2>Stop guessing. <em>Start knowing.</em></h2>
-                    <p>Free forever for students. Set up your first class in under a minute.</p>
-                    <button class="btn btn-xl lp-btn-white" id="devLoginBtn3">Open CalcYourGPA ${arrow}</button>
+            <!-- ====== BAND 3 — FEATURES (paper) ====== -->
+            <section class="lp-band lp-feat-band">
+                <div class="lp-band-inner">
+                    <div class="lp-feat-head">
+                        <span class="lp-kicker">${this._icon('star')} Everything in one place</span>
+                        <h2 class="lp-band-title">Grades are messy. Your <em>GPA</em> shouldn't be.</h2>
+                    </div>
+                    <div class="lp-feat-grid">
+                        ${this._featureCard('doc', 'indigo', 'Paste your syllabus', 'Our parser pulls out every category and weight automatically. No data entry, no spreadsheet.', ['Detects categories &amp; weights', 'Reads the letter-grade scale'])}
+                        ${this._featureCard('bolt', 'amber', 'Simulate any grade', 'Slide a hypothetical score onto any assignment and watch your class grade and GPA move instantly.', ['Live recalculation', '"What do I need?" targets'])}
+                        ${this._featureCard('chart', 'green', 'Every term, one number', 'Roll each class into a semester GPA and watch your cumulative GPA build over your whole degree.', ['Semester &amp; cumulative GPA', 'A+ / 4.33 scale toggle'])}
+                    </div>
                 </div>
+                ${this._zig('var(--lp-paper)', 'lp-zig-down')}
             </section>
 
+            <!-- ====== BAND 4 — STEPS (amber) ====== -->
+            <section class="lp-band lp-steps-band">
+                <div class="lp-band-inner">
+                    <div class="lp-feat-head">
+                        <span class="lp-kicker">${this._icon('star')} Three steps</span>
+                        <h2 class="lp-band-title">From syllabus to certainty.</h2>
+                    </div>
+                    <div class="lp-steps">
+                        ${this._step('01', 'Add your classes', 'Paste a syllabus or set up categories by hand. About a minute per class.')}
+                        ${this._step('02', 'Log your grades', 'Enter scores as you get them, or import straight from Canvas and Blackboard.')}
+                        ${this._step('03', 'Watch it add up', 'Your class grades and GPA update live, and what-if mode plans the rest.')}
+                    </div>
+                </div>
+                ${this._zig('var(--lp-amber)', 'lp-zig-down')}
+            </section>
+
+            <!-- ====== BAND 5 — CTA (emerald) ====== -->
+            <section class="lp-band lp-cta-band">
+                <div class="lp-cta-inner">
+                    <h2 class="lp-cta-title">Stop guessing.<br><em>Start knowing.</em></h2>
+                    <p class="lp-cta-sub">Free forever for students. Set up your first class in under a minute.</p>
+                    <button class="lp-btn lp-btn-big lp-btn-cream" id="devLoginBtn3">Open CalcYourGPA ${arrow}</button>
+                </div>
+                ${this._zig('var(--lp-emerald)', 'lp-zig-down')}
+            </section>
+
+            <!-- ====== FOOTER (ink) ====== -->
             <footer class="lp-footer">
-                <div class="logo-container">
-                    <div class="logo-mark"><span class="logo-mark-text">GPA</span></div>
-                    <span class="logo-text"><b>Calc</b>Your<b>GPA</b></span>
+                <div class="lp-logo">
+                    <div class="lp-logo-mark">GPA</div>
+                    <span class="lp-logo-name lp-logo-name-light"><b>Calc</b>Your<b>GPA</b></span>
                 </div>
                 <span class="lp-foot-note">© 2026 CalcYourGPA · Free to use · Your data stays private</span>
             </footer>
@@ -135,6 +161,16 @@ const LandingPage = {
         this.bindCalc();
         requestAnimationFrame(() => document.getElementById('lp')?.classList.add('is-ready'));
         setTimeout(() => document.getElementById('lp')?.classList.add('is-ready'), 60);
+        this._initReveal();
+    },
+
+    _initReveal() {
+        const els = document.querySelectorAll('.lp .reveal');
+        if (!els.length) return;
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+        }, { threshold: 0.1, rootMargin: '0px 0px -6% 0px' });
+        els.forEach((el) => io.observe(el));
     },
 
     bindLoginPrompt() {
@@ -162,6 +198,19 @@ const LandingPage = {
             document.getElementById(id)?.addEventListener('click', devLogin));
         ['comingSoonBtn', 'comingSoonBtn2'].forEach(id =>
             document.getElementById(id)?.addEventListener('click', googleLogin));
+    },
+
+    // chunky zigzag rough-edge divider
+    _zig(fill, cls) {
+        const W = 1200, teeth = 18, step = W / teeth, depth = 26, top = 12;
+        let d = `M0,0 L${W},0 L${W},${top} `;
+        for (let i = teeth - 1; i >= 0; i--) {
+            const peak = (i * step + step / 2).toFixed(1);
+            const left = (i * step).toFixed(1);
+            d += `L${peak},${top + depth} L${left},${top} `;
+        }
+        d += 'Z';
+        return `<div class="lp-zig ${cls || ''}"><svg viewBox="0 0 ${W} ${top + depth}" preserveAspectRatio="none" width="100%" height="${top + depth}"><path d="${d}" fill="${fill}"/></svg></div>`;
     },
 
     // ---- interactive hero calculator ----
@@ -241,8 +290,8 @@ const LandingPage = {
             fill.style.strokeDasharray = C;
             fill.style.strokeDashoffset = C * (1 - frac);
         }
-        document.querySelector('.lp-mcr').textContent = totalCr;
-        document.querySelector('.lp-mcl').textContent = classes;
+        const mcr = document.querySelector('.lp-mcr'); if (mcr) mcr.textContent = totalCr;
+        const mcl = document.querySelector('.lp-mcl'); if (mcl) mcl.textContent = classes;
 
         const numEl = document.querySelector('.lp-gauge-num');
         if (!numEl) return;
@@ -256,6 +305,7 @@ const LandingPage = {
             if (t < 1) requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
+        setTimeout(() => { numEl.textContent = gpa.toFixed(2); }, dur + 120);
     },
 
     bindCalc() {
@@ -271,14 +321,13 @@ const LandingPage = {
             else if (act === 'minus') row.credits = Math.max(1, row.credits - 1);
             else if (act === 'plus') row.credits = Math.min(6, row.credits + 1);
 
-            // update just this row's pill + dot
             const g = this._calcGrades[row.gi];
             const col = this._gradeColor(g.p);
             const rowEl = calc.querySelector(`.lp-row[data-i="${i}"]`);
             if (rowEl) {
                 const pill = rowEl.querySelector('.lp-pill-grade');
                 pill.textContent = g.l; pill.style.color = col;
-                pill.animate([{ transform: 'scale(0.8)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'cubic-bezier(0.34,1.56,0.64,1)' });
+                pill.animate([{ transform: 'scale(0.8)' }, { transform: 'scale(1.14)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'cubic-bezier(0.34,1.56,0.64,1)' });
                 rowEl.querySelector('.lp-rdot').style.background = col;
                 rowEl.querySelector('.lp-cr span').firstChild.textContent = row.credits;
             }
@@ -290,28 +339,29 @@ const LandingPage = {
     _icon(name) {
         const I = {
             spark: `<svg viewBox="0 0 16 16" width="15" height="15" fill="none"><path d="M8 1.5l1.6 4.3 4.4 1.6-4.4 1.6L8 13.5 6.4 9 2 7.4l4.4-1.6L8 1.5z" fill="currentColor"/></svg>`,
-            target: `<svg viewBox="0 0 18 18" width="16" height="16" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="9" r="3.5" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="9" r="0.6" fill="currentColor"/></svg>`,
+            target: `<svg viewBox="0 0 18 18" width="15" height="15" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="9" r="3.4" stroke="currentColor" stroke-width="2"/></svg>`,
             bolt: `<svg viewBox="0 0 16 16" width="15" height="15" fill="none"><path d="M9 1.5L3 9h4l-1 5.5L13 7H9l0-5.5z" fill="currentColor"/></svg>`,
-            doc: `<svg viewBox="0 0 20 20" width="18" height="18" fill="none"><path d="M5 2.5h6L15.5 7v10.5h-11v-15z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M11 2.5V7h4.5M7 11h6M7 14h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-            chart: `<svg viewBox="0 0 18 18" width="18" height="18" fill="none"><path d="M3 15V3M3 15h12M6 12V9m3 3V6m3 6V8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+            doc: `<svg viewBox="0 0 20 20" width="22" height="22" fill="none"><path d="M5 2.5h6L15.5 7v10.5h-11v-15z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M11 2.5V7h4.5M7 11h6M7 14h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+            chart: `<svg viewBox="0 0 18 18" width="22" height="22" fill="none"><path d="M3 15V3M3 15h12M6 12V9m3 3V6m3 6V8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`,
+            star: `<svg viewBox="0 0 16 16" width="14" height="14" fill="none"><path d="M8 1l1.8 4.6L14.5 6 10.9 9l1.4 4.8L8 11l-4.3 2.8L5.1 9 1.5 6l4.7-.4L8 1z" fill="currentColor"/></svg>`,
         };
         return I[name] || '';
     },
 
-    _featureCard(icon, title, body, list) {
+    _featureCard(icon, color, title, body, list) {
         return `
-        <div class="lp-feat-card">
+        <div class="lp-feat-card lp-feat-${color} reveal">
             <div class="lp-feat-ic">${this._icon(icon)}</div>
             <h3>${title}</h3>
             <p>${body}</p>
             <ul class="lp-feat-list">
-                ${list.map(li => `<li><span class="lp-feat-ck">${this._icon('spark')}</span>${li}</li>`).join('')}
+                ${list.map(li => `<li><span class="lp-feat-ck">${this._icon('star')}</span>${li}</li>`).join('')}
             </ul>
         </div>`;
     },
 
     _step(n, t, d) {
-        return `<div class="lp-step"><div class="lp-step-num">${n}</div><h4>${t}</h4><p>${d}</p></div>`;
+        return `<div class="lp-step reveal"><div class="lp-step-num">${n}</div><div><h4>${t}</h4><p>${d}</p></div></div>`;
     },
 
     async loadClasses() {
