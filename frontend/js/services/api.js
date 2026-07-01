@@ -2,6 +2,14 @@
 const Api = {
     // Make a request
     async request(endpoint, options = {}) {
+        // Guest mode: the entire API is served locally from localStorage.
+        // No auth, no billing, no database required.
+        if (typeof AuthService !== 'undefined' && AuthService.isGuest()) {
+            const method = options.method || 'GET';
+            const body = options.body ? JSON.parse(options.body) : null;
+            return LocalBackend.handle(method, endpoint, body);
+        }
+
         const url = `${CONFIG.API_BASE_URL}${endpoint}`;
         
         const defaultHeaders = {
@@ -33,7 +41,17 @@ const Api = {
                 window.location.reload();
                 throw new Error('Unauthorized');
             }
-            
+
+            // Handle 402 Payment Required — trial ended / subscription lapsed
+            if (response.status === 402) {
+                if (typeof SubscriptionService !== 'undefined') SubscriptionService.clearCache();
+                if (typeof App !== 'undefined') {
+                    App.subscription = { hasAccess: false, status: 'none' };
+                    App.navigate('paywall', { expired: true });
+                }
+                throw new Error('Subscription required');
+            }
+
             const data = await response.json();
             
             if (!response.ok) {

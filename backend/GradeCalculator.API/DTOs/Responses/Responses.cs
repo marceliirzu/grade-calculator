@@ -152,3 +152,18 @@ public class ChatResponse
     public string Message { get; set; } = string.Empty;
     public List<ChatMessageDto> UpdatedHistory { get; set; } = new();
 }
+
+public class SubscriptionStatusResponse
+{
+    /// <summary>True if the user can use the app (paid subscription or free trial).</summary>
+    public bool HasAccess { get; set; }
+
+    /// <summary>trial | none | trialing | active | past_due | canceled</summary>
+    public string Status { get; set; } = "none";
+
+    public DateTime? TrialEndsAt { get; set; }
+    public DateTime? CurrentPeriodEnd { get; set; }
+
+    /// <summary>False while Stripe keys haven't been added yet.</summary>
+    public bool BillingConfigured { get; set; }
+}

@@ -17,6 +17,12 @@ public interface IOpenAiService
     Task<string> GetCompletionAsync(string prompt);
 
     /// <summary>
+    /// Sends a prompt with strict JSON output mode and a token budget.
+    /// Used for structured extraction (e.g. syllabus parsing).
+    /// </summary>
+    Task<string> GetJsonCompletionAsync(string systemPrompt, string userContent, int maxTokens);
+
+    /// <summary>
     /// Sends a prompt to OpenAI and parses the response as JSON
     /// </summary>
     Task<T?> GetCompletionAsJsonAsync<T>(string prompt) where T : class;

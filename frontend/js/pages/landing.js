@@ -65,8 +65,8 @@ const LandingPage = {
                         <span class="lp-logo-name"><b>Calc</b>Your<b>GPA</b></span>
                     </div>
                     <div class="lp-nav-cta">
-                        <button class="lp-btn lp-btn-line" id="comingSoonBtn">Sign in</button>
-                        <button class="lp-btn lp-btn-dark" id="devLoginBtn">Open app ${arrow}</button>
+                        <button class="lp-btn lp-btn-line" id="signInBtn">Sign in</button>
+                        <button class="lp-btn lp-btn-dark" id="guestBtn1">Open the app ${arrow}</button>
                     </div>
                 </nav>
 
@@ -75,10 +75,11 @@ const LandingPage = {
                     <h1 class="lp-title">Know your grade <em class="lp-mk">before</em> the curve.</h1>
                     <p class="lp-sub">Paste a syllabus and CalcYourGPA reads the grading breakdown for you, then tracks every class, every category, and your live GPA in real time.</p>
                     <div class="lp-actions">
-                        <button class="lp-btn lp-btn-big lp-btn-indigo" id="devLoginBtn2">Start tracking free ${arrow}</button>
-                        <button class="lp-btn lp-btn-big lp-btn-line" id="comingSoonBtn2">Sign in with Google</button>
+                        <button class="lp-btn lp-btn-big lp-btn-indigo" id="guestBtn2">Try it now — free ${arrow}</button>
+                        <button class="lp-btn lp-btn-big lp-btn-line" id="signInBtn4">Sign in with Google</button>
                     </div>
-                    <div class="lp-note"><span class="lp-note-ck">${ck}</span> No credit card · Your grades stay on your device</div>
+                    <div class="lp-note"><span class="lp-note-ck">${ck}</span> No account needed · Your data stays in your browser</div>
+                    <div id="googleSignInButton" style="margin-top:14px;display:flex;justify-content:center;"></div>
                 </div>
                 ${this._zig('var(--lp-cream)', 'lp-zig-down')}
             </section>
@@ -137,12 +138,36 @@ const LandingPage = {
                 ${this._zig('var(--lp-amber)', 'lp-zig-down')}
             </section>
 
+            <!-- ====== BAND 4.5 — PRICING (paper) ====== -->
+            <section class="lp-band lp-feat-band">
+                <div class="lp-band-inner">
+                    <div class="lp-feat-head">
+                        <span class="lp-kicker">${this._icon('bolt')} Simple pricing</span>
+                        <h2 class="lp-band-title">Try it free. <em>Keep it cheap.</em></h2>
+                    </div>
+                    <div class="lp-feat-grid" style="max-width:760px;margin:0 auto;">
+                        ${this._priceCard('indigo', 'Monthly', '$4.99', '/month', [
+                            'Unlimited classes &amp; semesters',
+                            'AI syllabus parsing',
+                            'Grade advisor + what-if planning'
+                        ])}
+                        ${this._priceCard('green', 'Yearly', '$29.99', '/year', [
+                            'Everything in monthly',
+                            'Two months free',
+                            'One payment per school year'
+                        ])}
+                    </div>
+                    <p style="text-align:center;margin-top:22px;font-weight:600;opacity:0.75;">Use it free in your browser today — accounts with cloud sync, AI syllabus parsing and the grade advisor launch soon with a 7-day free trial.</p>
+                </div>
+                ${this._zig('var(--lp-paper)', 'lp-zig-down')}
+            </section>
+
             <!-- ====== BAND 5 — CTA (emerald) ====== -->
             <section class="lp-band lp-cta-band">
                 <div class="lp-cta-inner">
                     <h2 class="lp-cta-title">Stop guessing.<br><em>Start knowing.</em></h2>
-                    <p class="lp-cta-sub">Free forever for students. Set up your first class in under a minute.</p>
-                    <button class="lp-btn lp-btn-big lp-btn-cream" id="devLoginBtn3">Open CalcYourGPA ${arrow}</button>
+                    <p class="lp-cta-sub">Try it instantly, no account needed. Set up your first class in under a minute.</p>
+                    <button class="lp-btn lp-btn-big lp-btn-cream" id="guestBtn3">Open CalcYourGPA ${arrow}</button>
                 </div>
                 ${this._zig('var(--lp-emerald)', 'lp-zig-down')}
             </section>
@@ -153,7 +178,7 @@ const LandingPage = {
                     <div class="lp-logo-mark">GPA</div>
                     <span class="lp-logo-name lp-logo-name-light"><b>Calc</b>Your<b>GPA</b></span>
                 </div>
-                <span class="lp-foot-note">© 2026 CalcYourGPA · Free to use · Your data stays private</span>
+                <span class="lp-foot-note">© 2026 CalcYourGPA · 7-day free trial · Your data stays private</span>
             </footer>
         </div>`;
 
@@ -174,30 +199,67 @@ const LandingPage = {
     },
 
     bindLoginPrompt() {
-        const devLogin = async () => {
-            try {
-                await AuthService.devLogin();
-                document.querySelector('.header')?.classList.remove('hidden');
-                App.updateAuthUI();
-                App.navigate('semesterList');
-            } catch (e) {
-                console.error(e);
-                Modal._showToast('Login failed. Is the backend running?');
-            }
-        };
         const googleLogin = async () => {
             try {
                 await AuthService.initGoogleSignIn();
+                // Render the official button as a reliable fallback, then try One Tap.
+                AuthService.renderGoogleButton('googleSignInButton');
                 AuthService.signInWithGoogle();
+                document.getElementById('googleSignInButton')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } catch (e) {
                 console.error(e);
                 Modal._showToast('Google sign-in failed to load. Please try again.');
             }
         };
-        ['devLoginBtn', 'devLoginBtn2', 'devLoginBtn3'].forEach(id =>
-            document.getElementById(id)?.addEventListener('click', devLogin));
-        ['comingSoonBtn', 'comingSoonBtn2'].forEach(id =>
+
+        // Guest mode: fully functional, no account / billing / database needed.
+        const guestLogin = () => {
+            AuthService.enterGuestMode();
+            App.subscription = { hasAccess: true, status: 'guest', billingConfigured: false };
+            document.querySelector('.header')?.classList.remove('hidden');
+            App.updateAuthUI();
+            App.navigate('semesterList');
+        };
+
+        ['signInBtn', 'signInBtn4'].forEach(id =>
             document.getElementById(id)?.addEventListener('click', googleLogin));
+        ['guestBtn1', 'guestBtn2', 'guestBtn3'].forEach(id =>
+            document.getElementById(id)?.addEventListener('click', guestLogin));
+
+        // Local development only: bypass Google with a dev account.
+        const h = window.location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1') {
+            const nav = document.querySelector('.lp-nav-cta');
+            if (nav) {
+                const devBtn = document.createElement('button');
+                devBtn.className = 'lp-btn lp-btn-line';
+                devBtn.textContent = 'Dev login';
+                devBtn.addEventListener('click', async () => {
+                    try {
+                        await AuthService.devLogin();
+                        App.subscription = await SubscriptionService.getStatus(true);
+                        document.querySelector('.header')?.classList.remove('hidden');
+                        App.updateAuthUI();
+                        App.navigate(App.subscription.hasAccess ? 'semesterList' : 'paywall');
+                    } catch (e) {
+                        console.error(e);
+                        Modal._showToast('Dev login failed. Is the backend running?');
+                    }
+                });
+                nav.prepend(devBtn);
+            }
+        }
+    },
+
+    _priceCard(color, name, price, per, items) {
+        return `
+        <div class="lp-feat-card lp-feat-${color} reveal">
+            <div class="lp-feat-ic">${this._icon(color === 'green' ? 'chart' : 'bolt')}</div>
+            <h3>${name} — <span style="font-family:var(--font-family-mono)">${price}</span><small style="font-weight:500;opacity:.7">${per}</small></h3>
+            <ul class="lp-feat-list">
+                ${items.map(li => `<li><span class="lp-feat-ck">${this._icon('star')}</span>${li}</li>`).join('')}
+            </ul>
+        </div>`;
     },
 
     // chunky zigzag rough-edge divider
@@ -367,9 +429,12 @@ const LandingPage = {
     async loadClasses() {
         try {
             const endpoint = this.currentSemesterId
-                ? `classes?semesterId=${this.currentSemesterId}`
-                : 'classes';
-            this.classes = await Api.get(endpoint);
+                ? `/classes?semesterId=${this.currentSemesterId}`
+                : '/classes';
+            const response = await Api.get(endpoint);
+            // ApiResponse envelope: { success, message, data }
+            const list = Array.isArray(response) ? response : response.data;
+            this.classes = Array.isArray(list) ? list : [];
         } catch (error) {
             console.error('Failed to load classes:', error);
             this.classes = [];

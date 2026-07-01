@@ -1,3 +1,4 @@
+using GradeCalculator.API.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ namespace GradeCalculator.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[RequireActiveSubscription]
 public class SemestersController : ControllerBase
 {
     private readonly AppDbContext _context;

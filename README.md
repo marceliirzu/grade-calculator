@@ -1,92 +1,87 @@
-# GradeCalculator
+# CalcYourGPA (GradeCalculator)
 
-A web-based GPA calculator with AI-powered syllabus parsing.
+A subscription web app for GPA tracking with hybrid AI syllabus parsing.
+
+## Tech Stack
+
+- **Backend**: C# / ASP.NET Core 8 (JWT auth, Google Sign-In)
+- **Frontend**: Vanilla HTML/CSS/JS, chunky neobrutalist design system
+- **Database**: MySQL (Railway) via Pomelo EF Core
+- **Payments**: Stripe subscriptions (7-day free trial, monthly/yearly plans)
+- **AI**: OpenAI gpt-4o-mini — LLM is a *fallback*; most syllabi parse deterministically at zero token cost
 
 ## Project Structure
 
 ```
 GradeCalculator/
-├── backend/                    # ASP.NET Core API
-│   └── GradeCalculator.API/
-│       ├── Controllers/        # API endpoints
-│       ├── Models/             # Database entities
-│       ├── DTOs/               # Request/Response objects
-│       ├── Services/           # Business logic
-│       ├── Data/               # Database context
-│       └── Configuration/      # Settings classes
-│
-└── frontend/                   # Static HTML/CSS/JS
-    ├── css/                    # Stylesheets
-    ├── js/                     # JavaScript modules
-    └── index.html              # Main entry point
+├── backend/GradeCalculator.API/
+│   ├── Controllers/        # Auth, Classes, Categories, Grades, Semesters, Syllabus, GradeAdvisor, Payments
+│   ├── Filters/            # RequireActiveSubscription (402 paywall gate)
+│   ├── Models/             # Entities (User carries Stripe subscription state)
+│   ├── Services/           # Business logic, SubscriptionService, DeterministicSyllabusParser
+│   └── Configuration/      # JwtSettings, OpenAiSettings, StripeSettings
+└── frontend/
+    ├── css/                # chunky-theme.css re-skins the whole app to the landing design
+    └── js/                 # pages/paywall.js + services/subscriptionService.js handle billing
 ```
 
-## Getting Started
+## Required environment variables (Railway)
 
-### Backend Setup
+| Variable | Purpose |
+|----------|---------|
+| `MYSQL_URL` (or `ConnectionStrings__DefaultConnection`) | MySQL connection |
+| `Jwt__Secret` | Long random string — **app refuses to boot in production without it** |
+| `Google__ClientSecret` | Google OAuth |
+| `OpenAi__ApiKey` | Syllabus-parser LLM fallback |
+| `Stripe__SecretKey` | Stripe secret key (sk_...) |
+| `Stripe__PublishableKey` | Stripe publishable key (pk_...) |
+| `Stripe__WebhookSecret` | Webhook signing secret (whsec_...) |
+| `Stripe__MonthlyPriceId` / `Stripe__YearlyPriceId` | Price IDs from your Stripe dashboard |
+| `Stripe__FrontendUrl` | e.g. `https://calcyourgpa.com` (checkout redirects) |
 
-1. Navigate to the backend folder:
-   ```bash
-   cd backend/GradeCalculator.API
-   ```
+Stripe setup: create a product with monthly ($4.99) and yearly ($29.99) prices, then add a
+webhook endpoint pointing to `POST /api/payments/webhook` subscribed to
+`checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.payment_failed`.
 
-2. Restore packages:
-   ```bash
-   dotnet restore
-   ```
+> **Database note:** the app uses `EnsureCreated()`, which does not migrate existing tables.
+> The new `User` billing columns require a fresh database (or manual `ALTER TABLE`).
 
-3. Update `appsettings.json` with your API keys:
-   - OpenAI API key (for syllabus parsing)
-   - Google OAuth credentials (optional, for production auth)
+## Subscription model
 
-4. Run the API:
-   ```bash
-   dotnet run
-   ```
+Every new account gets a 7-day trial (no card). After that, all data endpoints return
+**402 Payment Required** and the frontend routes to the paywall. Webhooks keep
+`User.SubscriptionStatus` in sync; access persists until period end after cancellation.
 
-The API will start at `http://localhost:5000`
+## Syllabus parsing (hybrid, token-conscious)
 
-### Frontend Setup
+1. **Deterministic pass** — regex extraction of categories (percent or points), grade scale,
+   course name, credits. If weights reconcile to 100%, done: zero tokens.
+2. **LLM fallback** — only the grading-relevant lines (max ~6k chars) are sent, strict JSON
+   mode, temperature 0, 600-token cap, server-side validation that weights sum to 100,
+   one retry with error feedback. Deterministic findings override LLM guesses.
 
-1. Open `frontend/index.html` in a browser, OR
+## Local development
 
-2. Use a local server (recommended):
-   ```bash
-   cd frontend
-   npx serve .
-   ```
+```bash
+cd backend/GradeCalculator.API && dotnet run     # API on :5000
+cd frontend && npx serve .                        # UI on :3000/:5500
+```
 
-3. Update `js/config.js` if your API runs on a different port
-
-## Features
-
-- **Class Management**: Create and manage classes with credit hours
-- **Customizable Grade Scale**: Adjust A+/A/A- thresholds per class
-- **Categories**: Organize grades by Assignments, Quizzes, Exams, etc.
-- **Grade Rules**: Drop lowest, count highest, weight by score
-- **What-If Mode**: See how future grades affect your GPA
-- **AI Syllabus Parsing**: Paste your syllabus to auto-fill class info
-
-## Tech Stack
-
-- **Backend**: C# / ASP.NET Core 8
-- **Frontend**: Vanilla HTML, CSS, JavaScript
-- **Database**: SQLite (file-based)
-- **AI**: OpenAI GPT-4o mini
+`ASPNETCORE_ENVIRONMENT=Development` enables `/api/auth/dev-login`; a "Dev login" button
+appears automatically when the frontend runs on localhost.
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | /api/classes | Get all classes |
-| POST | /api/classes | Create a class |
-| PUT | /api/classes/{id} | Update a class |
-| DELETE | /api/classes/{id} | Delete a class |
-| POST | /api/categories | Create a category |
-| POST | /api/grades | Create a grade |
-| POST | /api/syllabus/parse | Parse syllabus with AI |
+| Method | Endpoint | Notes |
+|--------|----------|-------|
+| POST | /api/auth/google | Google ID-token login |
+| GET | /api/payments/subscription | Access snapshot for the UI |
+| POST | /api/payments/checkout | Start Stripe Checkout (`{plan: "monthly"\|"yearly"}`) |
+| POST | /api/payments/portal | Stripe billing portal |
+| POST | /api/payments/webhook | Stripe events (signature-verified) |
+| CRUD | /api/classes, /api/categories, /api/grades, /api/semesters | Paywalled |
+| POST | /api/syllabus/parse | Paywalled, hybrid parser |
 
 ## License
 
 MIT
-"# grade-calculator" 

@@ -1,3 +1,4 @@
+using GradeCalculator.API.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,9 +10,10 @@ using GradeCalculator.API.Models;
 
 namespace GradeCalculator.API.Controllers;
 
-[Authorize]
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+[RequireActiveSubscription]
 public class CategoriesController : ControllerBase
 {
     private readonly AppDbContext _context;

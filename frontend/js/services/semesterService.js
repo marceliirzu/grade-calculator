@@ -2,25 +2,29 @@
 const SemesterService = {
 
     async getAll() {
-        return await Api.get('semesters');
+        const response = await Api.get('/semesters');
+        return response.data || [];
     },
 
     async getById(id) {
-        return await Api.get(`semesters/${id}`);
+        const response = await Api.get(`/semesters/${id}`);
+        return response.data;
     },
 
     async create(data) {
         // data: { name, year, term, gpaGoal? }
-        return await Api.post('semesters', data);
+        const response = await Api.post('/semesters', data);
+        return response.data;
     },
 
     async update(id, data) {
         // data: { name, year, term, gpaGoal? }
-        return await Api.put(`semesters/${id}`, data);
+        const response = await Api.put(`/semesters/${id}`, data);
+        return response.data;
     },
 
     async delete(id) {
-        return await Api.delete(`semesters/${id}`);
+        await Api.delete(`/semesters/${id}`);
     },
 
     // Helpers for current semester context (stored in localStorage)

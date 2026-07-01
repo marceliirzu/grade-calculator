@@ -1,3 +1,4 @@
+using GradeCalculator.API.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GradeCalculator.API.DTOs.Requests;
@@ -10,6 +11,7 @@ namespace GradeCalculator.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[RequireActiveSubscription]
 public class GradeAdvisorController : ControllerBase
 {
     private readonly IGradeAdvisorService _gradeAdvisor;

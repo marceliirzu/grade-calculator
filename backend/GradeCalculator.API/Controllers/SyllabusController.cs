@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using GradeCalculator.API.Filters;
 using Microsoft.AspNetCore.Mvc;
 using GradeCalculator.API.DTOs.Requests;
 using GradeCalculator.API.DTOs.Responses;
@@ -7,6 +9,8 @@ namespace GradeCalculator.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+[RequireActiveSubscription]
 public class SyllabusController : ControllerBase
 {
     private readonly ISyllabusParserService _syllabusParser;

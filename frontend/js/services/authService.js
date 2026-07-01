@@ -34,16 +34,18 @@ const AuthService = {
             if (result.success && result.data) {
                 this.setToken(result.data.token);
                 this.setUser(result.data.user);
-                
-                // Refresh the app
+
+                // Resolve access before rendering the app
+                App.subscription = await SubscriptionService.getStatus(true);
+                document.querySelector('.header')?.classList.remove('hidden');
                 App.updateAuthUI();
-                App.navigate('landing');
+                App.navigate(App.subscription.hasAccess ? 'semesterList' : 'paywall');
             } else {
-                alert('Sign in failed. Please try again.');
+                Modal._showToast('Sign in failed. Please try again.');
             }
         } catch (error) {
             console.error('Google sign-in error:', error);
-            alert('Sign in failed. Please try again.');
+            Modal._showToast('Sign in failed. Please try again.');
         }
     },
     
@@ -90,16 +92,33 @@ const AuthService = {
         }
     },
     
+    // ---- Guest mode (no auth / billing / database required) ----
+    GUEST_KEY: 'gc_guest_mode',
+
+    enterGuestMode() {
+        Storage.set(this.GUEST_KEY, true);
+        this.setUser({ id: 0, name: 'Guest', email: '' });
+    },
+
+    isGuest() {
+        return Storage.get(this.GUEST_KEY) === true;
+    },
+
     // Logout
     logout() {
         Storage.remove(this.tokenKey);
         Storage.remove(this.userKey);
-        
+        Storage.remove(this.GUEST_KEY);
+        // Guest data (gc_guest_db) is intentionally kept so returning
+        // guests find their classes again.
+
         // Sign out from Google too
         if (typeof google !== 'undefined') {
             google.accounts.id.disableAutoSelect();
         }
-        
+
+        SubscriptionService.clearCache();
+        App.subscription = null;
         App.updateAuthUI();
         App.navigate('landing');
     },
@@ -123,6 +142,6 @@ const AuthService = {
     },
     
     isLoggedIn() {
-        return !!this.getToken();
+        return !!this.getToken() || this.isGuest();
     }
 };

@@ -63,6 +63,46 @@ public class OpenAiService : IOpenAiService
         }
     }
     
+    public async Task<string> GetJsonCompletionAsync(string systemPrompt, string userContent, int maxTokens)
+    {
+        var requestBody = new
+        {
+            model = _settings.Model,
+            messages = new object[]
+            {
+                new { role = "system", content = systemPrompt },
+                new { role = "user", content = userContent }
+            },
+            max_tokens = maxTokens,
+            temperature = 0.0, // deterministic extraction
+            response_format = new { type = "json_object" }
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        try
+        {
+            var response = await _httpClient.PostAsync("chat/completions", content);
+            response.EnsureSuccessStatusCode();
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var responseDoc = JsonDocument.Parse(responseJson);
+
+            return responseDoc
+                .RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling OpenAI API (JSON mode)");
+            throw;
+        }
+    }
+
     public async Task<T?> GetCompletionAsJsonAsync<T>(string prompt) where T : class
     {
         var response = await GetCompletionAsync(prompt);

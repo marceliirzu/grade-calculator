@@ -63,6 +63,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<OpenAiSettings>(builder.Configuration.GetSection("OpenAi"));
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
+
+// Stripe global API key (webhook + API calls). Safe to set even when unconfigured;
+// SubscriptionService refuses to run until real keys are present.
+var stripeSecretKey = builder.Configuration["Stripe:SecretKey"];
+if (!string.IsNullOrWhiteSpace(stripeSecretKey) && !stripeSecretKey.StartsWith("SET_"))
+{
+    Stripe.StripeConfiguration.ApiKey = stripeSecretKey;
+}
 
 // HttpClient Factory (needed for Google token verification)
 builder.Services.AddHttpClient();
@@ -75,9 +84,19 @@ builder.Services.AddScoped<IOpenAiService, OpenAiService>();
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
 builder.Services.AddScoped<IGradeAdvisorService, GradeAdvisorService>();
 builder.Services.AddScoped<ITargetGradeCalculatorService, TargetGradeCalculatorService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
 // Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+
+// Fail fast in production if the JWT secret was never set — a guessable
+// signing key would let anyone forge tokens for any account.
+if (!builder.Environment.IsDevelopment() &&
+    (string.IsNullOrWhiteSpace(jwtSettings?.Secret) || jwtSettings.Secret.StartsWith("SET_")))
+{
+    throw new InvalidOperationException(
+        "Jwt:Secret is not configured. Set the Jwt__Secret environment variable to a long random value.");
+}
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

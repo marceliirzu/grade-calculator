@@ -36,6 +36,7 @@
     <link rel="stylesheet" href="css/pages/class-detail.css">
     <link rel="stylesheet" href="css/pages/category-editor.css">
     <link rel="stylesheet" href="css/pages/semester.css">
+    <link rel="stylesheet" href="css/chunky-theme.css">
 
     <style>
         body { opacity: 0; transition: opacity 0.3s ease; }
@@ -136,6 +137,9 @@
             </div>
         </header>
 
+        <!-- Trial banner host (populated by App.navigate) -->
+        <div id="trialBannerHost"></div>
+
         <!-- Main Content Area -->
         <main class="main-content" id="mainContent"></main>
 
@@ -151,6 +155,7 @@
     <script src="js/utils/formatters.js"></script>
     <script src="js/parsers/syllabusParser.js"></script>
     <script src="js/parsers/gradebookParser.js"></script>
+    <script src="js/services/localBackend.js"></script>
     <script src="js/services/api.js"></script>
     <script src="js/services/authService.js"></script>
     <script src="js/services/classService.js"></script>
@@ -159,6 +164,7 @@
     <script src="js/services/syllabusService.js"></script>
     <script src="js/services/semesterService.js"></script>
     <script src="js/services/gradeAdvisorService.js"></script>
+    <script src="js/services/subscriptionService.js"></script>
     <script src="js/components/modal.js"></script>
     <script src="js/components/classCard.js"></script>
     <script src="js/components/gpaDisplay.js"></script>
@@ -173,6 +179,7 @@
     <script src="js/pages/categoryEditor.js"></script>
     <script src="js/pages/semesterList.js"></script>
     <script src="js/pages/semesterHistory.js"></script>
+    <script src="js/pages/paywall.js"></script>
     <script src="js/app.js"></script>
     <script>
         document.body.classList.add('loaded');
