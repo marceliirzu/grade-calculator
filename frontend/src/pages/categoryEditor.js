@@ -258,7 +258,7 @@ export const CategoryEditorPage = {
     }
 
     try {
-      await GradeService.update(gradeId, {
+      const updated = await GradeService.update(gradeId, {
         name,
         // The explicit flag is how the API distinguishes "clear this score" from "leave it
         // alone" — a bare null is ambiguous over JSON.
@@ -267,9 +267,61 @@ export const CategoryEditorPage = {
         pointsPossible: possible,
       });
 
-      await this.refresh();
+      // Patch the numbers in place rather than re-rendering the page.
+      //
+      // Editing a score used to call refresh(), which re-fetched and rebuilt the entire DOM on
+      // every field blur. Entering a term's worth of grades is the main thing people do here,
+      // and a full rebuild between each one reads as the page reloading under you — it also
+      // drops focus, so tabbing from one score to the next stopped working.
+      this.applyClassUpdate(updated);
     } catch (error) {
       Modal.toast(error.message ?? 'Could not save that grade.');
+    }
+  },
+
+  /**
+   * Refreshes the derived numbers from a server response without touching structure.
+   *
+   * Only values the server recomputed are written: the per-item percentages and the category
+   * total. Rows are never added, removed or reordered here — those paths still re-render, since
+   * the DOM genuinely changed shape.
+   */
+  applyClassUpdate(updated) {
+    if (!updated) return;
+
+    const category = updated.categories?.find((c) => c.id === this.categoryData.id);
+    if (!category) return;
+
+    // Keep the in-memory copies in step, so a later full render starts from the truth.
+    this.classData = updated;
+    this.categoryData = category;
+
+    const header = document.querySelector('.category-percentage');
+    if (header) {
+      header.textContent = category.currentGrade === null
+        ? DASH
+        : Formatters.percentage(category.currentGrade);
+    }
+
+    for (const item of category.gradeItems ?? []) {
+      const cell = document.querySelector(
+        `.grade-item[data-grade-id="${item.id}"] .grade-item-percentage`,
+      );
+
+      if (!cell) continue;
+
+      cell.textContent = item.percentage === null ? DASH : Formatters.percentage(item.percentage);
+
+      // The colour band can move with the score, so the class is rewritten rather than added to.
+      cell.className = 'grade-item-percentage';
+
+      if (item.percentage !== null) {
+        const colorClass = Formatters.gradeColorClass(
+          Formatters.letterGrade(item.percentage, this.classData.gradeScale),
+        );
+
+        if (colorClass) cell.classList.add(colorClass);
+      }
     }
   },
 

@@ -138,8 +138,8 @@ export const ClassSetupPage = {
   },
 
   renderCategoriesStep() {
-    const total = this.formData.categories.reduce((sum, c) => sum + (Number.parseFloat(c.weight) || 0), 0);
-    const isValid = Math.abs(total - 100) < 0.01;
+    // Shared with updateWeightTotal so the initial render and the live update cannot disagree.
+    const { total, isValid } = this.weightTotal();
 
     return `
       <h2 class="setup-card-title">Categories</h2>
@@ -161,15 +161,48 @@ export const ClassSetupPage = {
         `).join('')}
       </div>
       <button class="btn btn-secondary mt-4" id="addCategoryBtn">+ Add Category</button>
-      <div class="total-weight ${isValid ? 'success' : 'error'}">
+      <div class="total-weight ${isValid ? 'success' : 'error'}" id="weightTotal">
         <span>Total</span>
-        <span>${total.toFixed(1)}%</span>
+        <span id="weightTotalValue">${total.toFixed(1)}%</span>
       </div>
       <div class="setup-nav">
         <button class="btn btn-secondary btn-lg" id="prevBtn">Back</button>
         <button class="btn btn-primary btn-lg" id="nextBtn" ${isValid ? '' : 'disabled'}>Next</button>
       </div>
     `;
+  },
+
+  /** Sum of the entered weights, and whether it reconciles to 100. */
+  weightTotal() {
+    const total = this.formData.categories.reduce(
+      (sum, category) => sum + (Number.parseFloat(category.weight) || 0),
+      0,
+    );
+
+    return { total, isValid: Math.abs(total - 100) < 0.01 };
+  },
+
+  /**
+   * Updates only the running total and the Next button.
+   *
+   * Deliberately narrow: this runs on every keystroke, so it must not touch anything the user
+   * is currently interacting with. Re-rendering the step here is what made typing feel like the
+   * page was reloading.
+   */
+  updateWeightTotal() {
+    const { total, isValid } = this.weightTotal();
+
+    const value = document.getElementById('weightTotalValue');
+    if (value) value.textContent = `${total.toFixed(1)}%`;
+
+    const container = document.getElementById('weightTotal');
+    if (container) {
+      container.classList.toggle('success', isValid);
+      container.classList.toggle('error', !isValid);
+    }
+
+    const next = document.getElementById('nextBtn');
+    if (next) next.disabled = !isValid;
   },
 
   renderScaleStep() {
@@ -212,26 +245,19 @@ export const ClassSetupPage = {
       });
     });
 
-    // Weights re-render live so the running total updates as you type. Focus and caret are
-    // restored afterwards, which the original lost on every keystroke.
+    // Weights update the running total live, but must NOT re-render the page.
+    //
+    // This previously called rerender() on every keystroke and then tried to put focus and the
+    // caret back. Rebuilding the whole DOM per character is visible as a flicker that reads as
+    // a page refresh, drops any text selection, can jump the scroll position, and on mobile
+    // closes the keyboard. Only two things actually depend on the weight — the total and
+    // whether Next is enabled — so only those are touched.
     document.querySelectorAll('.category-weight').forEach((input) => {
       input.addEventListener('input', (event) => {
         const index = Number(event.target.dataset.index);
-        const caret = event.target.selectionStart;
 
         this.formData.categories[index].weight = Number.parseFloat(event.target.value) || 0;
-        this.rerender();
-
-        const restored = document.querySelector(`.category-weight[data-index="${index}"]`);
-
-        if (restored) {
-          restored.focus();
-          try {
-            restored.setSelectionRange(caret, caret);
-          } catch {
-            // Number inputs disallow selection ranges in some browsers; focus alone is enough.
-          }
-        }
+        this.updateWeightTotal();
       });
     });
 
