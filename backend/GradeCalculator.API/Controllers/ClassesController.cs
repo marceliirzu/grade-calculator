@@ -1,247 +1,188 @@
-using GradeCalculator.API.Filters;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using GradeCalculator.API.Auth;
 using GradeCalculator.API.Data;
 using GradeCalculator.API.DTOs.Requests;
 using GradeCalculator.API.DTOs.Responses;
 using GradeCalculator.API.Models;
+using GradeCalculator.API.Services;
 using GradeCalculator.API.Services.Interfaces;
-using System.Security.Claims;
 
 namespace GradeCalculator.API.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-[RequireActiveSubscription]
-public class ClassesController : ControllerBase
+public class ClassesController : ApiControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly IGpaCalculatorService _gpaCalculator;
-    
-    public ClassesController(AppDbContext context, IGpaCalculatorService gpaCalculator)
+    private readonly AppDbContext _db;
+    private readonly IGradeReadService _grades;
+
+    public ClassesController(ICurrentUserAccessor currentUser, AppDbContext db, IGradeReadService grades)
+        : base(currentUser)
     {
-        _context = context;
-        _gpaCalculator = gpaCalculator;
+        _db = db;
+        _grades = grades;
     }
-    
-    // GET: api/classes
+
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<ClassResponse>>>> GetClasses([FromQuery] int? semesterId = null)
+    public async Task<ActionResult<ApiResponse<List<ClassResponse>>>> GetAll(
+        [FromQuery] int? semesterId, CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        var query = _context.Classes
-            .Include(c => c.GradeScale)
-            .Include(c => c.Categories).ThenInclude(cat => cat.GradeItems)
-            .Include(c => c.Categories).ThenInclude(cat => cat.Rules)
-            .Where(c => c.UserId == userId);
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var classes = await _grades.GetClassesAsync(userId, semesterId, cancellationToken);
 
-        if (semesterId.HasValue)
-            query = query.Where(c => c.SemesterId == semesterId.Value);
-
-        var classes = await query.ToListAsync();
-        var response = classes.Select(MapToClassResponse).ToList();
-        return Ok(ApiResponse<List<ClassResponse>>.Ok(response));
+        return Ok(ApiResponse<List<ClassResponse>>.Ok(classes));
     }
-    
-    // GET: api/classes/5
-    [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<ClassResponse>>> GetClass(int id)
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Get(int id, CancellationToken cancellationToken)
     {
-        var classEntity = await _context.Classes
-            .Include(c => c.GradeScale)
-            .Include(c => c.Categories)
-                .ThenInclude(cat => cat.GradeItems)
-            .Include(c => c.Categories)
-                .ThenInclude(cat => cat.Rules)
-            .FirstOrDefaultAsync(c => c.Id == id);
-        
-        if (classEntity == null)
-            return NotFound(ApiResponse<ClassResponse>.Fail("Class not found"));
-        if (classEntity.UserId != GetUserId())
-            return Forbid();
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var cls = await _grades.GetClassAsync(id, userId, cancellationToken);
 
-        return Ok(ApiResponse<ClassResponse>.Ok(MapToClassResponse(classEntity)));
+        return Ok(ApiResponse<ClassResponse>.Ok(cls, warnings: cls.Warnings));
     }
-    
-    // POST: api/classes
+
+    [HttpGet("gpa")]
+    public async Task<ActionResult<ApiResponse<GpaResponse>>> GetGpa(
+        [FromQuery] int? semesterId, CancellationToken cancellationToken)
+    {
+        var userId = await CurrentUserIdAsync(cancellationToken);
+
+        return Ok(ApiResponse<GpaResponse>.Ok(await _grades.GetGpaAsync(userId, semesterId, cancellationToken)));
+    }
+
+    /// <summary>What score is needed on the remaining work to finish on a given letter grade.</summary>
+    [HttpGet("{id:int}/target/{letter}")]
+    public async Task<ActionResult<ApiResponse<TargetGradeResponse>>> GetTarget(
+        int id, string letter, CancellationToken cancellationToken)
+    {
+        var userId = await CurrentUserIdAsync(cancellationToken);
+
+        return Ok(ApiResponse<TargetGradeResponse>.Ok(
+            await _grades.GetTargetAsync(id, userId, letter, cancellationToken)));
+    }
+
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<ClassResponse>>> CreateClass(CreateClassRequest request)
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Create(
+        [FromBody] CreateClassRequest request, CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        
-        var classEntity = new Class
+        var userId = await CurrentUserIdAsync(cancellationToken);
+
+        await EnsureSemesterOwnedAsync(request.SemesterId, userId, cancellationToken);
+
+        var entity = new Class
         {
             UserId = userId,
-            Name = request.Name,
-            CreditHours = (int)request.CreditHours,
+            Name = request.Name.Trim(),
+            CreditHours = request.CreditHours,
             ShowOnlyCAndUp = request.ShowOnlyCAndUp,
-            SemesterId = request.SemesterId
+            SemesterId = request.SemesterId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            // Created together with the class so no class can ever exist without a scale --
+            // the state that used to force a silent fallback at grading time.
+            GradeScale = new GradeScale(),
         };
-        
-        // Create default grade scale
-        classEntity.GradeScale = new GradeScale();
-        
-        // Create default categories
-        classEntity.Categories = new List<Category>
+
+        _db.Classes.Add(entity);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var created = await _grades.GetClassAsync(entity.Id, userId, cancellationToken);
+
+        return CreatedAtAction(nameof(Get), new { id = entity.Id }, ApiResponse<ClassResponse>.Ok(created));
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Update(
+        int id, [FromBody] UpdateClassRequest request, CancellationToken cancellationToken)
+    {
+        var userId = await CurrentUserIdAsync(cancellationToken);
+
+        var entity = await _db.Classes.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId, cancellationToken)
+                     ?? throw new ResourceNotFoundException("Class", id);
+
+        await EnsureSemesterOwnedAsync(request.SemesterId, userId, cancellationToken);
+
+        entity.Name = request.Name.Trim();
+        entity.CreditHours = request.CreditHours;
+        entity.ShowOnlyCAndUp = request.ShowOnlyCAndUp;
+        entity.SemesterId = request.SemesterId;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(id, userId, cancellationToken)));
+    }
+
+    [HttpPut("{id:int}/grade-scale")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> UpdateGradeScale(
+        int id, [FromBody] UpdateGradeScaleRequest request, CancellationToken cancellationToken)
+    {
+        if (!request.IsMonotonic())
         {
-            new() { Name = "Assignments", Weight = 30, SortOrder = 0 },
-            new() { Name = "Quizzes", Weight = 20, SortOrder = 1 },
-            new() { Name = "Exams", Weight = 50, SortOrder = 2 }
-        };
-        
-        _context.Classes.Add(classEntity);
-        await _context.SaveChangesAsync();
-        
-        // Reload with navigation properties
-        await _context.Entry(classEntity).Reference(c => c.GradeScale).LoadAsync();
-        await _context.Entry(classEntity).Collection(c => c.Categories).LoadAsync();
-        
-        return CreatedAtAction(nameof(GetClass), new { id = classEntity.Id }, 
-            ApiResponse<ClassResponse>.Ok(MapToClassResponse(classEntity)));
-    }
-    
-    // PUT: api/classes/5
-    [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<ClassResponse>>> UpdateClass(int id, CreateClassRequest request)
-    {
-        var classEntity = await _context.Classes
-            .Include(c => c.GradeScale)
-            .Include(c => c.Categories)
-                .ThenInclude(cat => cat.GradeItems)
-            .FirstOrDefaultAsync(c => c.Id == id);
-        
-        if (classEntity == null)
-            return NotFound(ApiResponse<ClassResponse>.Fail("Class not found"));
-        if (classEntity.UserId != GetUserId())
-            return Forbid();
-
-        classEntity.Name = request.Name;
-        classEntity.CreditHours = (int)request.CreditHours;
-        classEntity.ShowOnlyCAndUp = request.ShowOnlyCAndUp;
-        classEntity.UpdatedAt = DateTime.UtcNow;
-        
-        await _context.SaveChangesAsync();
-        
-        return Ok(ApiResponse<ClassResponse>.Ok(MapToClassResponse(classEntity)));
-    }
-    
-    // DELETE: api/classes/5
-    [HttpDelete("{id}")]
-    public async Task<ActionResult<ApiResponse<bool>>> DeleteClass(int id)
-    {
-        var classEntity = await _context.Classes.FindAsync(id);
-        
-        if (classEntity == null)
-            return NotFound(ApiResponse<bool>.Fail("Class not found"));
-        if (classEntity.UserId != GetUserId())
-            return Forbid();
-
-        _context.Classes.Remove(classEntity);
-        await _context.SaveChangesAsync();
-        
-        return Ok(ApiResponse<bool>.Ok(true, "Class deleted"));
-    }
-    
-    // PUT: api/classes/5/gradescale
-    [HttpPut("{id}/gradescale")]
-    public async Task<ActionResult<ApiResponse<GradeScaleResponse>>> UpdateGradeScale(int id, UpdateGradeScaleRequest request)
-    {
-        var gradeScale = await _context.GradeScales
-            .Include(g => g.Class)
-            .FirstOrDefaultAsync(g => g.ClassId == id);
-
-        if (gradeScale == null)
-            return NotFound(ApiResponse<GradeScaleResponse>.Fail("Grade scale not found"));
-        if (gradeScale.Class?.UserId != GetUserId())
-            return Forbid();
-        
-        gradeScale.APlus = request.APlus;
-        gradeScale.A = request.A;
-        gradeScale.AMinus = request.AMinus;
-        gradeScale.BPlus = request.BPlus;
-        gradeScale.B = request.B;
-        gradeScale.BMinus = request.BMinus;
-        gradeScale.CPlus = request.CPlus;
-        gradeScale.C = request.C;
-        gradeScale.CMinus = request.CMinus;
-        gradeScale.DPlus = request.DPlus;
-        gradeScale.D = request.D;
-        gradeScale.DMinus = request.DMinus;
-        
-        await _context.SaveChangesAsync();
-        
-        return Ok(ApiResponse<GradeScaleResponse>.Ok(MapToGradeScaleResponse(gradeScale)));
-    }
-    
-    private int GetUserId() =>
-        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
-
-    private ClassResponse MapToClassResponse(Class c)
-    {
-        var currentGrade = _gpaCalculator.CalculateClassGrade(c);
-        string? letterGrade = null;
-        decimal? gpa = null;
-        
-        if (currentGrade.HasValue && c.GradeScale != null)
-        {
-            letterGrade = c.GradeScale.GetLetterGrade(currentGrade.Value);
-            gpa = c.GradeScale.GetGpaPoints(letterGrade);
+            throw new ValidationFailedException(
+                "Grade thresholds must decrease from A+ down to D-.");
         }
-        
-        return new ClassResponse
+
+        var userId = await CurrentUserIdAsync(cancellationToken);
+
+        var entity = await _db.Classes
+            .Include(c => c.GradeScale)
+            .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId, cancellationToken)
+            ?? throw new ResourceNotFoundException("Class", id);
+
+        var scale = entity.GradeScale;
+        if (scale is null)
         {
-            Id = c.Id,
-            Name = c.Name,
-            CreditHours = c.CreditHours,
-            ShowOnlyCAndUp = c.ShowOnlyCAndUp,
-            SemesterId = c.SemesterId,
-            CurrentGrade = currentGrade,
-            LetterGrade = letterGrade,
-            Gpa = gpa,
-            GradeScale = c.GradeScale != null ? MapToGradeScaleResponse(c.GradeScale) : null,
-            Categories = c.Categories.Select(cat => new CategoryResponse
-            {
-                Id = cat.Id,
-                Name = cat.Name,
-                Weight = cat.Weight,
-                CurrentGrade = _gpaCalculator.CalculateCategoryGrade(cat),
-                GradeItems = cat.GradeItems.Select(g => new GradeItemResponse
-                {
-                    Id = g.Id,
-                    Name = g.Name,
-                    PointsEarned = g.PointsEarned,
-                    PointsPossible = g.PointsPossible,
-                    Percentage = g.GetPercentage(),
-                    IsWhatIf = g.IsWhatIf
-                }).ToList(),
-                Rules = cat.Rules.Select(r => new RuleResponse
-                {
-                    Id = r.Id,
-                    Type = r.Type.ToString(),
-                    Value = r.Value,
-                    WeightDistribution = !string.IsNullOrEmpty(r.WeightDistribution) 
-                        ? System.Text.Json.JsonSerializer.Deserialize<List<decimal>>(r.WeightDistribution) 
-                        : null
-                }).ToList()
-            }).ToList()
-        };
+            scale = new GradeScale { ClassId = entity.Id };
+            _db.GradeScales.Add(scale);
+        }
+
+        scale.APlusGpaValue = request.APlusGpaValue;
+        scale.APlus = request.APlus;
+        scale.A = request.A;
+        scale.AMinus = request.AMinus;
+        scale.BPlus = request.BPlus;
+        scale.B = request.B;
+        scale.BMinus = request.BMinus;
+        scale.CPlus = request.CPlus;
+        scale.C = request.C;
+        scale.CMinus = request.CMinus;
+        scale.DPlus = request.DPlus;
+        scale.D = request.D;
+        scale.DMinus = request.DMinus;
+
+        entity.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(id, userId, cancellationToken)));
     }
-    
-    private GradeScaleResponse MapToGradeScaleResponse(GradeScale g) => new()
+
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult<ApiResponse<object>>> Delete(int id, CancellationToken cancellationToken)
     {
-        APlus = g.APlus,
-        A = g.A,
-        AMinus = g.AMinus,
-        BPlus = g.BPlus,
-        B = g.B,
-        BMinus = g.BMinus,
-        CPlus = g.CPlus,
-        C = g.C,
-        CMinus = g.CMinus,
-        DPlus = g.DPlus,
-        D = g.D,
-        DMinus = g.DMinus
-    };
+        var userId = await CurrentUserIdAsync(cancellationToken);
+
+        var entity = await _db.Classes.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId, cancellationToken)
+                     ?? throw new ResourceNotFoundException("Class", id);
+
+        // Categories, items, rules and the scale all cascade -- configured in AppDbContext.
+        _db.Classes.Remove(entity);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(ApiResponse<object>.Ok(new { deleted = id }));
+    }
+
+    /// <summary>
+    /// Rejects a semester id belonging to someone else. Without this a caller could file their
+    /// class under another user's semester by guessing an integer.
+    /// </summary>
+    private async Task EnsureSemesterOwnedAsync(int? semesterId, int userId, CancellationToken cancellationToken)
+    {
+        if (semesterId is null) return;
+
+        var exists = await _db.Semesters
+            .AnyAsync(s => s.Id == semesterId && s.UserId == userId, cancellationToken);
+
+        if (!exists) throw new ResourceNotFoundException("Semester", semesterId);
+    }
 }

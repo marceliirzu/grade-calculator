@@ -1,158 +1,100 @@
-using GradeCalculator.API.Filters;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using GradeCalculator.API.Auth;
 using GradeCalculator.API.Data;
 using GradeCalculator.API.DTOs.Requests;
 using GradeCalculator.API.DTOs.Responses;
 using GradeCalculator.API.Models;
+using GradeCalculator.API.Services;
+using GradeCalculator.API.Services.Interfaces;
 
 namespace GradeCalculator.API.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-[RequireActiveSubscription]
-public class GradesController : ControllerBase
+public class GradesController : ApiControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly AppDbContext _db;
+    private readonly IGradeReadService _grades;
 
-    public GradesController(AppDbContext context)
+    public GradesController(ICurrentUserAccessor currentUser, AppDbContext db, IGradeReadService grades)
+        : base(currentUser)
     {
-        _context = context;
+        _db = db;
+        _grades = grades;
     }
 
-    private int GetUserId() =>
-        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
-
-    // POST: api/grades
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<GradeItemResponse>>> CreateGrade(CreateGradeRequest request)
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Create(
+        [FromBody] CreateGradeRequest request, CancellationToken cancellationToken)
     {
-        var category = await _context.Categories
-            .Include(c => c.Class)
-            .FirstOrDefaultAsync(c => c.Id == request.CategoryId);
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var category = await LoadOwnedCategoryAsync(request.CategoryId, userId, cancellationToken);
 
-        if (category == null)
-            return NotFound(ApiResponse<GradeItemResponse>.Fail("Category not found"));
-
-        if (category.Class?.UserId != GetUserId())
-            return Forbid();
-
-        var maxOrder = await _context.GradeItems
+        var nextSortOrder = request.SortOrder ?? await _db.GradeItems
             .Where(g => g.CategoryId == request.CategoryId)
-            .MaxAsync(g => (int?)g.SortOrder) ?? -1;
+            .Select(g => (int?)g.SortOrder)
+            .MaxAsync(cancellationToken) + 1 ?? 0;
 
-        var gradeItem = new GradeItem
+        _db.GradeItems.Add(new GradeItem
         {
             CategoryId = request.CategoryId,
-            Name = request.Name,
+            Name = request.Name.Trim(),
             PointsEarned = request.PointsEarned,
             PointsPossible = request.PointsPossible,
             IsWhatIf = request.IsWhatIf,
-            SortOrder = maxOrder + 1
-        };
+            SortOrder = nextSortOrder,
+            CreatedAt = DateTime.UtcNow,
+        });
 
-        _context.GradeItems.Add(gradeItem);
-        await _context.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
 
-        return CreatedAtAction(nameof(GetGrade), new { id = gradeItem.Id },
-            ApiResponse<GradeItemResponse>.Ok(MapToResponse(gradeItem)));
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(category.ClassId, userId, cancellationToken)));
     }
 
-    // GET: api/grades/5
-    [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<GradeItemResponse>>> GetGrade(int id)
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Update(
+        int id, [FromBody] UpdateGradeRequest request, CancellationToken cancellationToken)
     {
-        var gradeItem = await _context.GradeItems
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var item = await LoadOwnedItemAsync(id, userId, cancellationToken);
+
+        if (request.Name is not null) item.Name = request.Name.Trim();
+
+        // Clearing a score and leaving it untouched are different operations, and JSON cannot
+        // tell them apart from a null alone -- hence the explicit flag.
+        if (request.ClearPointsEarned) item.PointsEarned = null;
+        else if (request.PointsEarned is not null) item.PointsEarned = request.PointsEarned;
+
+        if (request.PointsPossible is not null) item.PointsPossible = request.PointsPossible.Value;
+        if (request.IsWhatIf is not null) item.IsWhatIf = request.IsWhatIf.Value;
+        if (request.SortOrder is not null) item.SortOrder = request.SortOrder.Value;
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(ApiResponse<ClassResponse>.Ok(
+            await _grades.GetClassAsync(item.Category!.ClassId, userId, cancellationToken)));
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Delete(int id, CancellationToken cancellationToken)
+    {
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var item = await LoadOwnedItemAsync(id, userId, cancellationToken);
+        var classId = item.Category!.ClassId;
+
+        _db.GradeItems.Remove(item);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(classId, userId, cancellationToken)));
+    }
+
+    private async Task<Category> LoadOwnedCategoryAsync(int categoryId, int userId, CancellationToken cancellationToken) =>
+        await _db.Categories
+            .FirstOrDefaultAsync(c => c.Id == categoryId && c.Class!.UserId == userId, cancellationToken)
+        ?? throw new ResourceNotFoundException("Category", categoryId);
+
+    private async Task<GradeItem> LoadOwnedItemAsync(int itemId, int userId, CancellationToken cancellationToken) =>
+        await _db.GradeItems
             .Include(g => g.Category)
-                .ThenInclude(c => c!.Class)
-            .FirstOrDefaultAsync(g => g.Id == id);
-
-        if (gradeItem == null)
-            return NotFound(ApiResponse<GradeItemResponse>.Fail("Grade not found"));
-
-        if (gradeItem.Category?.Class?.UserId != GetUserId())
-            return Forbid();
-
-        return Ok(ApiResponse<GradeItemResponse>.Ok(MapToResponse(gradeItem)));
-    }
-
-    // PUT: api/grades/5
-    [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<GradeItemResponse>>> UpdateGrade(int id, CreateGradeRequest request)
-    {
-        var gradeItem = await _context.GradeItems
-            .Include(g => g.Category)
-                .ThenInclude(c => c!.Class)
-            .FirstOrDefaultAsync(g => g.Id == id);
-
-        if (gradeItem == null)
-            return NotFound(ApiResponse<GradeItemResponse>.Fail("Grade not found"));
-
-        if (gradeItem.Category?.Class?.UserId != GetUserId())
-            return Forbid();
-
-        gradeItem.Name = request.Name;
-        gradeItem.PointsEarned = request.PointsEarned;
-        gradeItem.PointsPossible = request.PointsPossible;
-        gradeItem.IsWhatIf = request.IsWhatIf;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(ApiResponse<GradeItemResponse>.Ok(MapToResponse(gradeItem)));
-    }
-
-    // DELETE: api/grades/5
-    [HttpDelete("{id}")]
-    public async Task<ActionResult<ApiResponse<bool>>> DeleteGrade(int id)
-    {
-        var gradeItem = await _context.GradeItems
-            .Include(g => g.Category)
-                .ThenInclude(c => c!.Class)
-            .FirstOrDefaultAsync(g => g.Id == id);
-
-        if (gradeItem == null)
-            return NotFound(ApiResponse<bool>.Fail("Grade not found"));
-
-        if (gradeItem.Category?.Class?.UserId != GetUserId())
-            return Forbid();
-
-        _context.GradeItems.Remove(gradeItem);
-        await _context.SaveChangesAsync();
-
-        return Ok(ApiResponse<bool>.Ok(true, "Grade deleted"));
-    }
-
-    // PUT: api/grades/5/whatif
-    [HttpPut("{id}/whatif")]
-    public async Task<ActionResult<ApiResponse<GradeItemResponse>>> ToggleWhatIf(int id)
-    {
-        var gradeItem = await _context.GradeItems
-            .Include(g => g.Category)
-                .ThenInclude(c => c!.Class)
-            .FirstOrDefaultAsync(g => g.Id == id);
-
-        if (gradeItem == null)
-            return NotFound(ApiResponse<GradeItemResponse>.Fail("Grade not found"));
-
-        if (gradeItem.Category?.Class?.UserId != GetUserId())
-            return Forbid();
-
-        gradeItem.IsWhatIf = !gradeItem.IsWhatIf;
-        await _context.SaveChangesAsync();
-
-        return Ok(ApiResponse<GradeItemResponse>.Ok(MapToResponse(gradeItem)));
-    }
-
-    private GradeItemResponse MapToResponse(GradeItem g) => new()
-    {
-        Id = g.Id,
-        Name = g.Name,
-        PointsEarned = g.PointsEarned,
-        PointsPossible = g.PointsPossible,
-        Percentage = g.GetPercentage(),
-        IsWhatIf = g.IsWhatIf
-    };
+            .FirstOrDefaultAsync(g => g.Id == itemId && g.Category!.Class!.UserId == userId, cancellationToken)
+        ?? throw new ResourceNotFoundException("Grade item", itemId);
 }

@@ -4,7 +4,13 @@ backend/**/obj/
 backend/**/*.db
 backend/**/*.db-shm
 backend/**/*.db-wal
+# Local dev config: holds a real database password. appsettings.json is committed with
+# placeholders only.
 backend/**/appsettings.Development.json
+
+# launchSettings is committed on purpose: it carries no secrets and it is what pins the
+# Development environment and port 5000 for `dotnet run`.
+!backend/**/Properties/launchSettings.json
 
 # IDE
 .vs/
@@ -20,11 +26,22 @@ Thumbs.db
 # Logs
 *.log
 
-# Environment config (contains secrets/URLs — never commit)
-frontend/env.js
+# Environment config
+# Everything VITE_* is inlined into the public bundle, so these files hold configuration
+# rather than secrets — but they are still per-developer, so they stay out of the repo.
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 # Dependencies
 node_modules/
+
+# Build output
+frontend/dist/
+
+# Tooling scratch
+.claude-flow/
+.swarm/

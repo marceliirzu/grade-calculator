@@ -1,87 +1,190 @@
-# CalcYourGPA (GradeCalculator)
+# CalcYourGPA
 
-A subscription web app for GPA tracking with hybrid AI syllabus parsing.
+GPA and grade calculator for college students. Paste a syllabus, it reads the grading
+breakdown, and it tracks every class, category and assignment with a live GPA.
 
-## Tech Stack
+| Piece | Stack | Hosted on |
+|---|---|---|
+| Frontend | Vite + vanilla ES modules | GitHub Pages |
+| Backend | ASP.NET Core 8 (LTS) + EF Core | Railway |
+| Database | MySQL 8 | Railway |
+| Auth | Clerk | — |
 
-- **Backend**: C# / ASP.NET Core 8 (JWT auth, Google Sign-In)
-- **Frontend**: Vanilla HTML/CSS/JS, chunky neobrutalist design system
-- **Database**: MySQL (Railway) via Pomelo EF Core
-- **Payments**: Stripe subscriptions (7-day free trial, monthly/yearly plans)
-- **AI**: OpenAI gpt-4o-mini — LLM is a *fallback*; most syllabi parse deterministically at zero token cost
+---
 
-## Project Structure
+## The one thing to read first
 
-```
-GradeCalculator/
-├── backend/GradeCalculator.API/
-│   ├── Controllers/        # Auth, Classes, Categories, Grades, Semesters, Syllabus, GradeAdvisor, Payments
-│   ├── Filters/            # RequireActiveSubscription (402 paywall gate)
-│   ├── Models/             # Entities (User carries Stripe subscription state)
-│   ├── Services/           # Business logic, SubscriptionService, DeterministicSyllabusParser
-│   └── Configuration/      # JwtSettings, OpenAiSettings, StripeSettings
-└── frontend/
-    ├── css/                # chunky-theme.css re-skins the whole app to the landing design
-    └── js/                 # pages/paywall.js + services/subscriptionService.js handle billing
-```
+The grading rules live in **[`shared/GRADING_SPEC.md`](shared/GRADING_SPEC.md)**, and they are
+implemented **twice**:
 
-## Required environment variables (Railway)
+| Implementation | Location | Serves |
+|---|---|---|
+| C# | `backend/GradeCalculator.API/Grading/` | Signed-in users |
+| JavaScript | `frontend/src/core/grading/` | Guest mode (no account, browser-only) |
 
-| Variable | Purpose |
-|----------|---------|
-| `MYSQL_URL` (or `ConnectionStrings__DefaultConnection`) | MySQL connection |
-| `Jwt__Secret` | Long random string — **app refuses to boot in production without it** |
-| `Google__ClientSecret` | Google OAuth |
-| `OpenAi__ApiKey` | Syllabus-parser LLM fallback |
-| `Stripe__SecretKey` | Stripe secret key (sk_...) |
-| `Stripe__PublishableKey` | Stripe publishable key (pk_...) |
-| `Stripe__WebhookSecret` | Webhook signing secret (whsec_...) |
-| `Stripe__MonthlyPriceId` / `Stripe__YearlyPriceId` | Price IDs from your Stripe dashboard |
-| `Stripe__FrontendUrl` | e.g. `https://calcyourgpa.com` (checkout redirects) |
+Two implementations exist because guest mode has no server to call. They are kept honest by
+**[`shared/grade-vectors.json`](shared/grade-vectors.json)** — a set of golden test vectors that
+*both* test suites run against. Neither suite copies the file; both read it from `shared/`.
 
-Stripe setup: create a product with monthly ($4.99) and yearly ($29.99) prices, then add a
-webhook endpoint pointing to `POST /api/payments/webhook` subscribed to
-`checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.payment_failed`.
-
-> **Database note:** the app uses `EnsureCreated()`, which does not migrate existing tables.
-> The new `User` billing columns require a fresh database (or manual `ALTER TABLE`).
-
-## Subscription model
-
-Every new account gets a 7-day trial (no card). After that, all data endpoints return
-**402 Payment Required** and the frontend routes to the paywall. Webhooks keep
-`User.SubscriptionStatus` in sync; access persists until period end after cancellation.
-
-## Syllabus parsing (hybrid, token-conscious)
-
-1. **Deterministic pass** — regex extraction of categories (percent or points), grade scale,
-   course name, credits. If weights reconcile to 100%, done: zero tokens.
-2. **LLM fallback** — only the grading-relevant lines (max ~6k chars) are sent, strict JSON
-   mode, temperature 0, 600-token cap, server-side validation that weights sum to 100,
-   one retry with error feedback. Deterministic findings override LLM guesses.
-
-## Local development
+**If you change grading behaviour, change all four together:** the spec, the vectors, the C#
+engine, and the JS engine. A change to one alone will fail CI, which is the point.
 
 ```bash
-cd backend/GradeCalculator.API && dotnet run     # API on :5000
-cd frontend && npx serve .                        # UI on :3000/:5500
+cd backend  && dotnet test        # 32 tests
+cd frontend && npm test           # 66 tests
 ```
 
-`ASPNETCORE_ENVIRONMENT=Development` enables `/api/auth/dev-login`; a "Dev login" button
-appears automatically when the frontend runs on localhost.
+---
 
-## API Endpoints
+## Running locally
 
-| Method | Endpoint | Notes |
-|--------|----------|-------|
-| POST | /api/auth/google | Google ID-token login |
-| GET | /api/payments/subscription | Access snapshot for the UI |
-| POST | /api/payments/checkout | Start Stripe Checkout (`{plan: "monthly"\|"yearly"}`) |
-| POST | /api/payments/portal | Stripe billing portal |
-| POST | /api/payments/webhook | Stripe events (signature-verified) |
-| CRUD | /api/classes, /api/categories, /api/grades, /api/semesters | Paywalled |
-| POST | /api/syllabus/parse | Paywalled, hybrid parser |
+**Start here:**
 
-## License
+```bash
+cd frontend && npm install && npm run doctor
+```
 
-MIT
+The preflight checks your toolchain, the database, the backend config and the frontend config,
+and prints the exact fix for anything missing. It exits non-zero only on genuinely blocking
+problems — missing Clerk or LLM keys are reported as warnings, because the app runs without
+them in guest mode.
+
+`npm run doctor:deploy` adds the production checklist.
+
+Prerequisites: .NET 8 SDK (or 9, which builds net8.0 fine), Node 20+, MySQL 8.
+
+**1. Database.** Create an empty database; migrations build the schema on first run.
+
+```sql
+CREATE DATABASE gradecalculator CHARACTER SET utf8mb4;
+```
+
+**2. Backend config.** Create `backend/GradeCalculator.API/appsettings.Development.json`
+(gitignored — it holds a real password):
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Port=3306;Database=gradecalculator;Uid=root;Pwd=YOUR_PASSWORD;"
+  },
+  "Clerk": { "Authority": "", "AuthorizedParties": [] },
+  "Cors": { "AllowedOrigins": ["http://localhost:5173"] },
+  "Llm": { "ApiKey": "" }
+}
+```
+
+Leaving `Clerk.Authority` empty is fine in development: the API then rejects every token, and
+you work in guest mode, which needs no auth at all. Leaving `Llm.ApiKey` empty disables the AI
+fallback; the deterministic syllabus parser still works.
+
+**3. Frontend config.** Create `frontend/.env.local` (see `.env.example`):
+
+```
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+```
+
+`VITE_API_BASE_URL` can be omitted locally — the Vite dev server proxies `/api` to port 5000.
+
+**4. Run.** `start.bat`, or by hand:
+
+```bash
+cd backend/GradeCalculator.API && dotnet run     # http://localhost:5000
+cd frontend && npm install && npm run dev        # http://localhost:5173
+```
+
+---
+
+## Keys you need to supply
+
+Nothing secret is committed. `appsettings.json` ships `SET_*` placeholders, and the API
+**refuses to start in production** if `Clerk__Authority` is still unset — a deliberate fail-fast,
+because an API nobody can authenticate against should not accept traffic.
+
+### Clerk
+
+1. Create an application at [clerk.com](https://clerk.com).
+2. **API Keys** gives you two values:
+   - *Publishable key* (`pk_live_...`) — public, goes in the frontend build.
+   - *Frontend API URL* (e.g. `https://clerk.yourdomain.com`) — this is the JWT **issuer**.
+
+The backend never needs your Clerk *secret* key. It validates tokens against Clerk's public
+JWKS, discovered from the authority URL, so signing keys rotate with no deploy.
+
+### Railway (backend service variables)
+
+| Variable | Value | Required |
+|---|---|---|
+| `Clerk__Authority` | Your Clerk Frontend API URL | **yes** |
+| `Clerk__AuthorizedParties__0` | `https://calcyourgpa.com` (your site origin) | strongly recommended |
+| `Cors__AllowedOrigins__0` | `https://calcyourgpa.com` | **yes** |
+| `MYSQL_URL` *or* `ConnectionStrings__DefaultConnection` | From the attached MySQL plugin | **yes** |
+| `Llm__ApiKey` | OpenAI key | optional |
+| `Llm__DailyTokenLimitPerUser` | Defaults to 40000 | optional |
+
+`AuthorizedParties` is not optional in spirit: Clerk session tokens carry no `aud` claim, so the
+`azp` check is what stops a token minted for another site on the same Clerk instance being
+replayed against this API. Leaving it empty disables that check.
+
+**Railway build setting:** set the service's **Root Directory** to
+`backend/GradeCalculator.API` so it picks up the Dockerfile.
+
+### GitHub Pages (repository *variables*, not secrets)
+
+Settings → Secrets and variables → Actions → **Variables**:
+
+| Variable | Value |
+|---|---|
+| `VITE_API_BASE_URL` | `https://your-app.up.railway.app/api` |
+| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_live_...` |
+| `VITE_BASE` | `/` for a custom domain, `/<repo-name>/` for a `github.io` project site |
+| `CUSTOM_DOMAIN` | `calcyourgpa.com` (optional; writes the CNAME file) |
+
+These are variables rather than secrets on purpose. Both are inlined into the public bundle and
+readable by anyone with devtools; marking them secret would redact them from build logs while
+changing nothing about their exposure, and would falsely imply the site keeps them private.
+
+---
+
+## How the AI stays cheap
+
+Syllabus parsing tries four tiers, cheapest first, and only falls through on failure:
+
+1. **Deterministic regex pass** — zero tokens. When the weights it finds reconcile to 100%, no
+   model is involved at all. This handles most real syllabi, because a grading table is
+   structured data.
+2. **Shared parse cache** — zero tokens, keyed by a SHA-256 of the *normalised* text. Students in
+   one course upload the same document; the second one through is free. Only the extracted
+   structure is stored, never the syllabus itself.
+3. **LLM on a trimmed excerpt** — the grading-relevant lines only, hard-capped at
+   `Llm:MaxInputChars`, in strict JSON mode at temperature 0, with one corrective retry.
+4. **Partial deterministic output** — so a failed parse still gives something to correct.
+
+The grade advisor makes exactly **one** call per question. It computes the student's grades
+server-side with the same engine that renders the UI, packs them into a compact snapshot, and
+sends that — instead of giving a model tools and letting it loop.
+
+Every tier is measured. `LlmUsage` records tokens spent *and* tokens avoided, so
+`GET /api/account/llm-quota` reports real numbers rather than estimates, and the daily per-user
+cap is enforced against the provider's own usage figures.
+
+---
+
+## Layout
+
+```
+backend/
+  GradeCalculator.API/
+    Grading/         pure grading engine — no EF, no ASP.NET, no I/O
+    Auth/            Clerk token handling and lazy user provisioning
+    Services/        read paths, syllabus parsing, LLM client, usage metering
+    Data/Migrations/ EF migrations (schema is versioned, not auto-created)
+  GradeCalculator.Tests/
+frontend/
+  src/core/grading/  the browser engine — peer of the C# one
+  src/services/      API client, Clerk auth, guest-mode backend
+  src/pages/         one module per screen
+  tests/
+shared/
+  GRADING_SPEC.md    normative grading rules
+  grade-vectors.json golden vectors, read by both test suites
+```

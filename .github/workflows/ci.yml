@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore GradeCalculator.sln
+
+      # The API builds with TreatWarningsAsErrors, so this also gates on warnings.
+      - name: Build
+        working-directory: backend
+        run: dotnet build GradeCalculator.sln --configuration Release --no-restore
+
+      - name: Test
+        working-directory: backend
+        run: dotnet test GradeCalculator.sln --configuration Release --no-build --verbosity normal
+
+      # Catches a model change that was made without a matching migration — otherwise the
+      # mismatch only surfaces at boot in production, where it takes the API down.
+      - name: Verify migrations are up to date
+        working-directory: backend/GradeCalculator.API
+        run: |
+          dotnet tool install --global dotnet-ef --version 8.* > /dev/null
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef migrations has-pending-model-changes && {
+            echo "::error::The EF model has changes with no migration. Run: dotnet ef migrations add <Name> --output-dir Data/Migrations"
+            exit 1
+          } || true
+
+  frontend:
+    name: Frontend (Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        env:
+          # A placeholder is enough to prove the build works; the real value is injected by
+          # the deploy workflow.
+          VITE_API_BASE_URL: https://ci.invalid/api
+        run: npm run build
+
+  grading-contract:
+    name: Grading contract
+    runs-on: ubuntu-latest
+
+    # Both engines are verified against shared/grade-vectors.json by their own suites above.
+    # This job guards the thing neither suite can see: an edit to the spec or the vectors that
+    # lands without the implementations being updated alongside it.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require engine changes alongside vector changes
+        if: github.event_name == 'pull_request'
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD")
+
+          echo "$CHANGED" | grep -q '^shared/grade-vectors.json$' || exit 0
+
+          echo "Golden vectors changed; checking both engines were updated too."
+
+          CS=$(echo "$CHANGED" | grep -c '^backend/GradeCalculator.API/Grading/' || true)
+          JS=$(echo "$CHANGED" | grep -c '^frontend/src/core/grading/' || true)
+
+          if [ "$CS" -eq 0 ] || [ "$JS" -eq 0 ]; then
+            echo "::warning::shared/grade-vectors.json changed but only one engine was touched"
+            echo "(C# files changed: $CS, JS files changed: $JS)."
+            echo "This is allowed — adding a vector that both engines already satisfy is normal —"
+            echo "but confirm the change was intentional and that GRADING_SPEC.md still matches."
+          fi

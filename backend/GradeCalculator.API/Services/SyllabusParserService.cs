@@ -1,92 +1,47 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using GradeCalculator.API.Configuration;
+using GradeCalculator.API.Data;
 using GradeCalculator.API.DTOs.Responses;
+using GradeCalculator.API.Models;
 using GradeCalculator.API.Services.Interfaces;
 
 namespace GradeCalculator.API.Services;
 
 /// <summary>
-/// Hybrid syllabus parser.
-/// 1. Deterministic pass (regex + exact math) — zero tokens. If category weights
-///    reconcile to 100%, the LLM is never called.
-/// 2. LLM fallback — only sees a trimmed, grading-relevant excerpt, runs in strict
-///    JSON mode at temperature 0 with a tight token budget, and is validated
-///    server-side (weights must sum to 100). One retry with error feedback.
-/// Deterministic findings (class name, credits, grade scale) always win over
-/// LLM guesses when both exist.
+/// Extracts grading categories from a syllabus, spending as few tokens as possible.
+///
+/// Four tiers, cheapest first — each one only runs if the previous failed:
+///
+///   1. Deterministic regex pass. Zero tokens. When the weights it finds reconcile to 100%
+///      the answer is not a guess, and no LLM is involved at all. This handles the majority
+///      of real syllabi, because a grading table is a structured thing.
+///   2. Shared parse cache, keyed by a hash of the normalised text. Zero tokens. Students in
+///      one course upload the same document, so the second one through is free.
+///   3. LLM on a *trimmed excerpt* — the grading-relevant lines only, hard-capped — in strict
+///      JSON mode at temperature 0.
+///   4. Partial deterministic output, so a failed parse still gives the user something to
+///      correct rather than an error.
+///
+/// Every tier is measured. <see cref="ILlmUsageTracker"/> records what was spent *and* what was
+/// avoided, so the saving is a number in the database rather than a claim in a comment.
 /// </summary>
-public class SyllabusParserService : ISyllabusParserService
+public sealed class SyllabusParserService : ISyllabusParserService
 {
-    private const int MaxOutputTokens = 600;
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    private readonly IOpenAiService _openAiService;
-    private readonly ILogger<SyllabusParserService> _logger;
+    /// <summary>Collapses whitespace so cosmetically different copies still hash equal.</summary>
+    private static readonly Regex WhitespaceRun = new(@"\s+", RegexOptions.Compiled);
 
-    public SyllabusParserService(IOpenAiService openAiService, ILogger<SyllabusParserService> logger)
-    {
-        _openAiService = openAiService;
-        _logger = logger;
-    }
-
-    public async Task<SyllabusParseResponse> ParseSyllabusAsync(string syllabusText)
-    {
-        // ---- Pass 1: deterministic, zero tokens ----
-        var det = DeterministicSyllabusParser.Parse(syllabusText);
-
-        if (det.CategoriesConfident)
-        {
-            _logger.LogInformation(
-                "Syllabus parsed deterministically ({Count} categories, 0 tokens used)",
-                det.Categories.Count);
-
-            return new SyllabusParseResponse
-            {
-                ClassName = det.ClassName,
-                CreditHours = det.CreditHours,
-                Categories = det.Categories,
-                GradeScale = det.GradeScale
-            };
-        }
-
-        // ---- Pass 2: token-conscious LLM fallback ----
-        var trimmed = DeterministicSyllabusParser.TrimForLlm(syllabusText);
-        _logger.LogInformation(
-            "Deterministic parse inconclusive — LLM fallback on trimmed excerpt ({Trimmed}/{Full} chars)",
-            trimmed.Length, syllabusText.Length);
-
-        var llm = await ParseWithLlmAsync(trimmed);
-
-        if (llm == null || llm.Categories.Count == 0)
-        {
-            // Last resort: return whatever the deterministic pass scraped together
-            // so the user can correct it in the UI instead of getting an error.
-            if (det.Categories.Count > 0)
-            {
-                _logger.LogWarning("LLM fallback failed — returning partial deterministic result");
-                return new SyllabusParseResponse
-                {
-                    ClassName = det.ClassName,
-                    CreditHours = det.CreditHours,
-                    Categories = DeterministicSyllabusParser.NormalizeTo100(det.Categories),
-                    GradeScale = det.GradeScale
-                };
-            }
-
-            throw new InvalidOperationException(
-                "Could not extract grading categories from this syllabus. " +
-                "Try pasting just the grading/evaluation section.");
-        }
-
-        // Merge: deterministic wins where it found something concrete.
-        return new SyllabusParseResponse
-        {
-            ClassName = det.ClassName ?? llm.ClassName,
-            CreditHours = det.CreditHours ?? llm.CreditHours,
-            Categories = DeterministicSyllabusParser.NormalizeTo100(llm.Categories),
-            GradeScale = det.GradeScale ?? llm.GradeScale
-        };
-    }
-
-    // ---------------- LLM fallback ----------------
+    /// <summary>
+    /// Typical cost of the LLM path, used to attribute a saving to cache and deterministic hits.
+    /// Only ever reported as "tokens saved" — never billed, never used for the quota.
+    /// </summary>
+    private const int AssumedLlmCallCost = 1800;
 
     private const string SystemPrompt =
         """
@@ -103,122 +58,273 @@ public class SyllabusParserService : ISyllabusParserService
         - If the syllabus uses points, convert each category to a percentage of total points.
         - Merge numbered duplicates ("Exam 1", "Exam 2" -> "Exams") only when they share one weight pool.
         - gradeScale values are the MINIMUM percentage for each letter; null if the syllabus has no scale.
-        - creditHours is an integer 1-12, null if not stated.
+        - creditHours may be fractional (1.5); null if not stated.
         - Do not invent categories that are not in the text.
         """;
 
-    private async Task<LlmParsed?> ParseWithLlmAsync(string trimmedSyllabus)
-    {
-        var userContent = "SYLLABUS EXCERPT:\n" + trimmedSyllabus;
+    private readonly AppDbContext _db;
+    private readonly ILlmClient _llm;
+    private readonly ILlmUsageTracker _usage;
+    private readonly LlmSettings _settings;
+    private readonly ILogger<SyllabusParserService> _logger;
 
-        for (var attempt = 1; attempt <= 2; attempt++)
+    public SyllabusParserService(
+        AppDbContext db,
+        ILlmClient llm,
+        ILlmUsageTracker usage,
+        IOptions<LlmSettings> settings,
+        ILogger<SyllabusParserService> logger)
+    {
+        _db = db;
+        _llm = llm;
+        _usage = usage;
+        _settings = settings.Value;
+        _logger = logger;
+    }
+
+    public async Task<SyllabusParseResponse> ParseSyllabusAsync(
+        string syllabusText,
+        int? userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(syllabusText))
+            throw new ValidationFailedException("The syllabus text is empty.");
+
+        // ---- Tier 1: deterministic, zero tokens ----
+        var deterministic = DeterministicSyllabusParser.Parse(syllabusText);
+
+        if (deterministic.CategoriesConfident)
         {
+            _logger.LogInformation(
+                "Syllabus parsed deterministically ({Count} categories, 0 tokens).",
+                deterministic.Categories.Count);
+
+            await _usage.RecordAvoidedAsync(userId, LlmFeature.SyllabusParse, "none", AssumedLlmCallCost, cancellationToken);
+
+            return new SyllabusParseResponse
+            {
+                ClassName = deterministic.ClassName,
+                CreditHours = deterministic.CreditHours,
+                Categories = deterministic.Categories,
+                GradeScale = deterministic.GradeScale,
+                Source = "deterministic",
+                TokensUsed = 0,
+                Notes = { "Read directly from the grading table — no AI needed." },
+            };
+        }
+
+        // ---- Tier 2: shared cache, zero tokens ----
+        var hash = ComputeHash(syllabusText);
+        var cached = await _db.SyllabusParseCaches.FirstOrDefaultAsync(c => c.ContentHash == hash, cancellationToken);
+
+        if (cached is not null)
+        {
+            var restored = Deserialize(cached.ResultJson);
+            if (restored is not null)
+            {
+                cached.HitCount++;
+                cached.LastHitAt = DateTime.UtcNow;
+                await SaveQuietlyAsync(cancellationToken);
+
+                await _usage.RecordAvoidedAsync(userId, LlmFeature.SyllabusParse, cached.Model ?? "none", cached.TokensSpent, cancellationToken);
+
+                _logger.LogInformation("Syllabus parse served from cache (hit #{Hits}, 0 tokens).", cached.HitCount);
+
+                restored.Source = "cache";
+                restored.TokensUsed = 0;
+                restored.Notes = new List<string> { "Recognised from a previously parsed syllabus." };
+                return restored;
+            }
+
+            // A corrupt cache row must not poison every future request for this document.
+            _logger.LogWarning("Discarding unreadable syllabus cache entry {Id}.", cached.Id);
+            _db.SyllabusParseCaches.Remove(cached);
+            await SaveQuietlyAsync(cancellationToken);
+        }
+
+        // ---- Tier 3: LLM on a trimmed excerpt ----
+        if (_llm.IsConfigured && userId is not null)
+        {
+            await _usage.EnsureWithinQuotaAsync(userId.Value, cancellationToken);
+
+            var excerpt = DeterministicSyllabusParser.TrimForLlm(syllabusText, _settings.MaxInputChars);
+
+            _logger.LogInformation(
+                "Deterministic parse inconclusive; calling LLM on {Trimmed} of {Full} chars.",
+                excerpt.Length, syllabusText.Length);
+
+            var parsed = await ParseWithLlmAsync(excerpt, userId, cancellationToken);
+
+            if (parsed is not null)
+            {
+                var response = Merge(deterministic, parsed.Value.Result);
+                response.Source = "llm";
+                response.TokensUsed = parsed.Value.Tokens;
+                response.Notes.Add($"Extracted by AI from a {excerpt.Length}-character excerpt.");
+
+                await CacheAsync(hash, response, "llm", _llm.Model, parsed.Value.Tokens, cancellationToken);
+                return response;
+            }
+        }
+
+        // ---- Tier 4: partial deterministic output beats an error ----
+        if (deterministic.Categories.Count > 0)
+        {
+            _logger.LogWarning("Falling back to a partial deterministic parse.");
+
+            return new SyllabusParseResponse
+            {
+                ClassName = deterministic.ClassName,
+                CreditHours = deterministic.CreditHours,
+                Categories = DeterministicSyllabusParser.NormalizeTo100(deterministic.Categories),
+                GradeScale = deterministic.GradeScale,
+                Source = "deterministic",
+                TokensUsed = 0,
+                Notes = { "The weights did not add up to 100%, so they were scaled proportionally. Please check them." },
+            };
+        }
+
+        throw new ValidationFailedException(
+            "No grading categories could be found in this syllabus. " +
+            "Try pasting just the grading or evaluation section.");
+    }
+
+    // -----------------------------------------------------------------------
+
+    private async Task<(SyllabusParseResponse Result, int Tokens)?> ParseWithLlmAsync(
+        string excerpt,
+        int? userId,
+        CancellationToken cancellationToken)
+    {
+        var userContent = "SYLLABUS EXCERPT:\n" + excerpt;
+        var totalTokens = 0;
+
+        for (var attempt = 0; attempt <= _settings.MaxValidationRetries; attempt++)
+        {
+            LlmCompletion completion;
+
             try
             {
-                var raw = await _openAiService.GetJsonCompletionAsync(SystemPrompt, userContent, MaxOutputTokens);
-                var parsed = Deserialize(raw);
-
-                var error = Validate(parsed);
-                if (error == null) return parsed;
-
-                _logger.LogWarning("LLM syllabus output invalid (attempt {Attempt}): {Error}", attempt, error);
-                userContent = $"Your previous answer was invalid: {error}. Fix it.\n\nSYLLABUS EXCERPT:\n{trimmedSyllabus}";
+                completion = await _llm.CompleteJsonAsync(
+                    SystemPrompt, userContent, _settings.MaxOutputTokens, cancellationToken);
+            }
+            catch (FeatureUnavailableException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "LLM syllabus parse attempt {Attempt} failed", attempt);
-                if (attempt == 2) return null;
+                _logger.LogError(ex, "LLM syllabus parse failed on attempt {Attempt}.", attempt + 1);
+                return null;
+            }
+
+            totalTokens += completion.TotalTokens;
+
+            // Recorded even on a failed parse: the tokens were spent regardless of the outcome.
+            await _usage.RecordSpendAsync(userId, LlmFeature.SyllabusParse, completion, succeeded: true, cancellationToken);
+
+            var parsed = Deserialize(completion.Content);
+
+            if (parsed is { Categories.Count: > 0 })
+            {
+                parsed.Categories = DeterministicSyllabusParser.NormalizeTo100(parsed.Categories);
+                return (parsed, totalTokens);
+            }
+
+            if (attempt < _settings.MaxValidationRetries)
+            {
+                // One corrective retry. Telling the model what was wrong is far cheaper than
+                // resending the whole excerpt blind, and stops an endless retry loop.
+                userContent =
+                    "SYLLABUS EXCERPT:\n" + excerpt +
+                    "\n\nYour previous reply was not valid JSON with a non-empty \"categories\" array. " +
+                    "Return only the JSON object described in the system message.";
             }
         }
+
+        _logger.LogWarning("LLM returned no usable categories after {Attempts} attempt(s).",
+            _settings.MaxValidationRetries + 1);
 
         return null;
     }
 
-    private static LlmParsed? Deserialize(string raw)
+    /// <summary>
+    /// Deterministic findings win over LLM guesses wherever both exist — a regex that matched an
+    /// explicit "3 credit hours" is simply more reliable than a model inferring it.
+    /// </summary>
+    private static SyllabusParseResponse Merge(DeterministicSyllabusParser.Result deterministic, SyllabusParseResponse llm) => new()
     {
-        raw = raw.Trim();
-        if (raw.StartsWith("```"))
-        {
-            raw = raw.TrimStart('`');
-            if (raw.StartsWith("json")) raw = raw[4..];
-            raw = raw.TrimEnd('`').Trim();
-        }
+        ClassName = deterministic.ClassName ?? llm.ClassName,
+        CreditHours = deterministic.CreditHours ?? llm.CreditHours,
+        Categories = llm.Categories,
+        GradeScale = deterministic.GradeScale ?? llm.GradeScale,
+    };
 
-        var parsed = JsonSerializer.Deserialize<LlmParsedRaw>(raw, new JsonSerializerOptions
+    private async Task CacheAsync(
+        string hash,
+        SyllabusParseResponse response,
+        string source,
+        string model,
+        int tokensSpent,
+        CancellationToken cancellationToken)
+    {
+        _db.SyllabusParseCaches.Add(new SyllabusParseCache
         {
-            PropertyNameCaseInsensitive = true
+            ContentHash = hash,
+            ResultJson = JsonSerializer.Serialize(response, Json),
+            Source = source,
+            Model = model,
+            TokensSpent = tokensSpent,
+            HitCount = 0,
+            CreatedAt = DateTime.UtcNow,
+            LastHitAt = DateTime.UtcNow,
         });
 
-        if (parsed == null) return null;
+        // A lost cache write costs tokens next time; it must not cost the user their parse.
+        await SaveQuietlyAsync(cancellationToken);
+    }
 
-        return new LlmParsed
+    private async Task SaveQuietlyAsync(CancellationToken cancellationToken)
+    {
+        try
         {
-            ClassName = string.IsNullOrWhiteSpace(parsed.ClassName) ? null : parsed.ClassName.Trim(),
-            CreditHours = parsed.CreditHours is >= 1 and <= 12 ? parsed.CreditHours : null,
-            Categories = parsed.Categories?
-                .Where(c => !string.IsNullOrWhiteSpace(c.Name) && c.Weight > 0)
-                .Select(c => new ParsedCategory { Name = c.Name.Trim(), Weight = c.Weight })
-                .ToList() ?? new List<ParsedCategory>(),
-            GradeScale = parsed.GradeScale == null ? null : new ParsedGradeScale
-            {
-                APlus = parsed.GradeScale.APlus, A = parsed.GradeScale.A, AMinus = parsed.GradeScale.AMinus,
-                BPlus = parsed.GradeScale.BPlus, B = parsed.GradeScale.B, BMinus = parsed.GradeScale.BMinus,
-                CPlus = parsed.GradeScale.CPlus, C = parsed.GradeScale.C, CMinus = parsed.GradeScale.CMinus,
-                DPlus = parsed.GradeScale.DPlus, D = parsed.GradeScale.D, DMinus = parsed.GradeScale.DMinus
-            }
-        };
-    }
-
-    private static string? Validate(LlmParsed? parsed)
-    {
-        if (parsed == null) return "response was not valid JSON";
-        if (parsed.Categories.Count == 0) return "categories array was empty";
-        if (parsed.Categories.Count > 20) return "too many categories (max 20)";
-        if (parsed.Categories.Any(c => c.Weight <= 0 || c.Weight > 100))
-            return "each category weight must be between 0 and 100";
-
-        var sum = parsed.Categories.Sum(c => c.Weight);
-        if (Math.Abs(sum - 100m) > 3m)
-            return $"weights sum to {sum}, they must sum to 100";
-
-        return null;
-    }
-
-    private sealed class LlmParsed
-    {
-        public string? ClassName { get; set; }
-        public int? CreditHours { get; set; }
-        public List<ParsedCategory> Categories { get; set; } = new();
-        public ParsedGradeScale? GradeScale { get; set; }
-    }
-
-    private sealed class LlmParsedRaw
-    {
-        public string? ClassName { get; set; }
-        public int? CreditHours { get; set; }
-        public List<RawCategory>? Categories { get; set; }
-        public RawScale? GradeScale { get; set; }
-
-        public sealed class RawCategory
-        {
-            public string Name { get; set; } = "";
-            public decimal Weight { get; set; }
+            await _db.SaveChangesAsync(cancellationToken);
         }
-
-        public sealed class RawScale
+        catch (DbUpdateException ex)
         {
-            public decimal? APlus { get; set; }
-            public decimal? A { get; set; }
-            public decimal? AMinus { get; set; }
-            public decimal? BPlus { get; set; }
-            public decimal? B { get; set; }
-            public decimal? BMinus { get; set; }
-            public decimal? CPlus { get; set; }
-            public decimal? C { get; set; }
-            public decimal? CMinus { get; set; }
-            public decimal? DPlus { get; set; }
-            public decimal? D { get; set; }
-            public decimal? DMinus { get; set; }
+            _logger.LogWarning(ex, "Syllabus cache write failed; continuing without caching.");
         }
+    }
+
+    private static SyllabusParseResponse? Deserialize(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        // JSON mode should return a bare object, but a stray prose wrapper is cheap to survive.
+        var start = raw.IndexOf('{');
+        var end = raw.LastIndexOf('}');
+        if (start < 0 || end <= start) return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<SyllabusParseResponse>(raw[start..(end + 1)], Json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// SHA-256 of the case-folded, whitespace-collapsed text. Normalising first is what makes
+    /// the cache actually hit: the same syllabus pasted from a PDF and from a web page differs
+    /// only in whitespace.
+    /// </summary>
+    private static string ComputeHash(string text)
+    {
+        var normalized = WhitespaceRun.Replace(text, " ").Trim().ToLowerInvariant();
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }

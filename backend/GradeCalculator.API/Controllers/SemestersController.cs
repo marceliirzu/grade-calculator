@@ -1,204 +1,121 @@
-using GradeCalculator.API.Filters;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using GradeCalculator.API.Auth;
 using GradeCalculator.API.Data;
 using GradeCalculator.API.DTOs.Requests;
 using GradeCalculator.API.DTOs.Responses;
 using GradeCalculator.API.Models;
+using GradeCalculator.API.Services;
 using GradeCalculator.API.Services.Interfaces;
-using System.Security.Claims;
 
 namespace GradeCalculator.API.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-[RequireActiveSubscription]
-public class SemestersController : ControllerBase
+public class SemestersController : ApiControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly IGpaCalculatorService _gpaCalculator;
+    private static readonly string[] ValidTerms = { "Fall", "Spring", "Summer", "Winter" };
 
-    public SemestersController(AppDbContext context, IGpaCalculatorService gpaCalculator)
+    private readonly AppDbContext _db;
+    private readonly IGradeReadService _grades;
+
+    public SemestersController(ICurrentUserAccessor currentUser, AppDbContext db, IGradeReadService grades)
+        : base(currentUser)
     {
-        _context = context;
-        _gpaCalculator = gpaCalculator;
+        _db = db;
+        _grades = grades;
     }
 
-    // GET: api/semesters
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<SemesterResponse>>>> GetSemesters()
+    public async Task<ActionResult<ApiResponse<List<SemesterResponse>>>> GetAll(CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        var semesters = await _context.Semesters
-            .Include(s => s.Classes)
-                .ThenInclude(c => c.GradeScale)
-            .Include(s => s.Classes)
-                .ThenInclude(c => c.Categories)
-                    .ThenInclude(cat => cat.GradeItems)
-            .Include(s => s.Classes)
-                .ThenInclude(c => c.Categories)
-                    .ThenInclude(cat => cat.Rules)
-            .Where(s => s.UserId == userId)
-            .OrderByDescending(s => s.Year)
-            .ThenBy(s => s.Term)
-            .ToListAsync();
+        var userId = await CurrentUserIdAsync(cancellationToken);
 
-        // Also get all classes for cumulative GPA
-        var allClasses = semesters.SelectMany(s => s.Classes).ToList();
-        var semesterClassGroups = semesters.Select(s => s.Classes.AsEnumerable()).ToList();
-        var cumulativeGpa = _gpaCalculator.CalculateCumulativeGpa(semesterClassGroups);
-
-        var response = semesters.Select(s => MapToSemesterResponse(s, cumulativeGpa)).ToList();
-        return Ok(ApiResponse<List<SemesterResponse>>.Ok(response));
+        return Ok(ApiResponse<List<SemesterResponse>>.Ok(await _grades.GetSemestersAsync(userId, cancellationToken)));
     }
 
-    // GET: api/semesters/5
-    [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<SemesterResponse>>> GetSemester(int id)
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<ApiResponse<SemesterResponse>>> Get(int id, CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        var semester = await _context.Semesters
-            .Include(s => s.Classes)
-                .ThenInclude(c => c.GradeScale)
-            .Include(s => s.Classes)
-                .ThenInclude(c => c.Categories)
-                    .ThenInclude(cat => cat.GradeItems)
-            .Include(s => s.Classes)
-                .ThenInclude(c => c.Categories)
-                    .ThenInclude(cat => cat.Rules)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var userId = await CurrentUserIdAsync(cancellationToken);
 
-        if (semester == null) return NotFound(ApiResponse<SemesterResponse>.Fail("Semester not found"));
-        if (semester.UserId != userId) return Forbid();
-
-        // Get all user semesters for cumulative GPA
-        var allSemesters = await _context.Semesters
-            .Include(s => s.Classes).ThenInclude(c => c.GradeScale)
-            .Include(s => s.Classes).ThenInclude(c => c.Categories).ThenInclude(cat => cat.GradeItems)
-            .Include(s => s.Classes).ThenInclude(c => c.Categories).ThenInclude(cat => cat.Rules)
-            .Where(s => s.UserId == userId).ToListAsync();
-        var cumulativeGpa = _gpaCalculator.CalculateCumulativeGpa(allSemesters.Select(s => s.Classes.AsEnumerable()));
-
-        return Ok(ApiResponse<SemesterResponse>.Ok(MapToSemesterResponse(semester, cumulativeGpa)));
+        return Ok(ApiResponse<SemesterResponse>.Ok(await _grades.GetSemesterAsync(id, userId, cancellationToken)));
     }
 
-    // POST: api/semesters
+    [HttpGet("cumulative-gpa")]
+    public async Task<ActionResult<ApiResponse<object>>> GetCumulativeGpa(CancellationToken cancellationToken)
+    {
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var gpa = await _grades.GetCumulativeGpaAsync(userId, cancellationToken);
+
+        return Ok(ApiResponse<object>.Ok(new { cumulativeGpa = gpa }));
+    }
+
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<SemesterResponse>>> CreateSemester(CreateSemesterRequest request)
+    public async Task<ActionResult<ApiResponse<SemesterResponse>>> Create(
+        [FromBody] CreateSemesterRequest request, CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        var semester = new Semester
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var term = NormaliseTerm(request.Term);
+
+        var entity = new Semester
         {
-            Name = request.Name,
-            Year = request.Year,
-            Term = request.Term,
-            GpaGoal = request.GpaGoal,
             UserId = userId,
-            CreatedAt = DateTime.UtcNow
+            Name = request.Name.Trim(),
+            Year = request.Year,
+            Term = term,
+            GpaGoal = request.GpaGoal,
+            CreatedAt = DateTime.UtcNow,
         };
-        _context.Semesters.Add(semester);
-        await _context.SaveChangesAsync();
-        semester.Classes = new List<Class>();
-        return CreatedAtAction(nameof(GetSemester), new { id = semester.Id },
-            ApiResponse<SemesterResponse>.Ok(MapToSemesterResponse(semester, null)));
+
+        _db.Semesters.Add(entity);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var created = await _grades.GetSemesterAsync(entity.Id, userId, cancellationToken);
+
+        return CreatedAtAction(nameof(Get), new { id = entity.Id }, ApiResponse<SemesterResponse>.Ok(created));
     }
 
-    // PUT: api/semesters/5
-    [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<SemesterResponse>>> UpdateSemester(int id, UpdateSemesterRequest request)
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<ApiResponse<SemesterResponse>>> Update(
+        int id, [FromBody] UpdateSemesterRequest request, CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        var semester = await _context.Semesters
-            .Include(s => s.Classes).ThenInclude(c => c.GradeScale)
-            .Include(s => s.Classes).ThenInclude(c => c.Categories).ThenInclude(cat => cat.GradeItems)
-            .Include(s => s.Classes).ThenInclude(c => c.Categories).ThenInclude(cat => cat.Rules)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        var userId = await CurrentUserIdAsync(cancellationToken);
 
-        if (semester == null) return NotFound(ApiResponse<SemesterResponse>.Fail("Semester not found"));
-        if (semester.UserId != userId) return Forbid();
+        var entity = await _db.Semesters.FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId, cancellationToken)
+                     ?? throw new ResourceNotFoundException("Semester", id);
 
-        semester.Name = request.Name;
-        semester.Year = request.Year;
-        semester.Term = request.Term;
-        semester.GpaGoal = request.GpaGoal;
-        await _context.SaveChangesAsync();
+        if (request.Name is not null) entity.Name = request.Name.Trim();
+        if (request.Year is not null) entity.Year = request.Year.Value;
+        if (request.Term is not null) entity.Term = NormaliseTerm(request.Term);
 
-        var allSemesters = await _context.Semesters
-            .Include(s => s.Classes).ThenInclude(c => c.GradeScale)
-            .Include(s => s.Classes).ThenInclude(c => c.Categories).ThenInclude(cat => cat.GradeItems)
-            .Include(s => s.Classes).ThenInclude(c => c.Categories).ThenInclude(cat => cat.Rules)
-            .Where(s => s.UserId == userId).ToListAsync();
-        var cumulativeGpa = _gpaCalculator.CalculateCumulativeGpa(allSemesters.Select(s => s.Classes.AsEnumerable()));
+        if (request.ClearGpaGoal) entity.GpaGoal = null;
+        else if (request.GpaGoal is not null) entity.GpaGoal = request.GpaGoal;
 
-        return Ok(ApiResponse<SemesterResponse>.Ok(MapToSemesterResponse(semester, cumulativeGpa)));
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(ApiResponse<SemesterResponse>.Ok(await _grades.GetSemesterAsync(id, userId, cancellationToken)));
     }
 
-    // DELETE: api/semesters/5
-    [HttpDelete("{id}")]
-    public async Task<ActionResult<ApiResponse<bool>>> DeleteSemester(int id)
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult<ApiResponse<object>>> Delete(int id, CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        var semester = await _context.Semesters.FindAsync(id);
-        if (semester == null) return NotFound(ApiResponse<bool>.Fail("Semester not found"));
-        if (semester.UserId != userId) return Forbid();
+        var userId = await CurrentUserIdAsync(cancellationToken);
 
-        _context.Semesters.Remove(semester);
-        await _context.SaveChangesAsync();
-        return Ok(ApiResponse<bool>.Ok(true, "Semester deleted"));
+        var entity = await _db.Semesters.FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId, cancellationToken)
+                     ?? throw new ResourceNotFoundException("Semester", id);
+
+        // Classes survive with SemesterId set to null (see AppDbContext). Deleting a term must
+        // not take a term's worth of grades with it.
+        _db.Semesters.Remove(entity);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(ApiResponse<object>.Ok(new { deleted = id }));
     }
 
-    private int GetUserId() =>
-        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
-
-    private SemesterResponse MapToSemesterResponse(Semester s, decimal? cumulativeGpa)
+    private static string NormaliseTerm(string term)
     {
-        var semesterGpa = _gpaCalculator.CalculateSemesterGpa(s.Classes);
-        var goalProgress = _gpaCalculator.CalculateGpaGoalProgress(semesterGpa, s.GpaGoal);
+        var match = ValidTerms.FirstOrDefault(t => string.Equals(t, term.Trim(), StringComparison.OrdinalIgnoreCase));
 
-        return new SemesterResponse
-        {
-            Id = s.Id,
-            Name = s.Name,
-            Year = s.Year,
-            Term = s.Term,
-            GpaGoal = s.GpaGoal,
-            SemesterGpa = semesterGpa,
-            CumulativeGpa = cumulativeGpa,
-            GpaGoalProgress = goalProgress,
-            ClassCount = s.Classes.Count,
-            Classes = s.Classes.Select(c =>
-            {
-                var currentGrade = _gpaCalculator.CalculateClassGrade(c);
-                string? letterGrade = null;
-                decimal? gpa = null;
-                if (currentGrade.HasValue && c.GradeScale != null)
-                {
-                    letterGrade = c.GradeScale.GetLetterGrade(currentGrade.Value);
-                    gpa = c.GradeScale.GetGpaPoints(letterGrade);
-                }
-                return new ClassResponse
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                    CreditHours = c.CreditHours,
-                    ShowOnlyCAndUp = c.ShowOnlyCAndUp,
-                    SemesterId = c.SemesterId,
-                    CurrentGrade = currentGrade,
-                    LetterGrade = letterGrade,
-                    Gpa = gpa,
-                    GradeScale = c.GradeScale != null ? new GradeScaleResponse
-                    {
-                        APlus = c.GradeScale.APlus, A = c.GradeScale.A, AMinus = c.GradeScale.AMinus,
-                        BPlus = c.GradeScale.BPlus, B = c.GradeScale.B, BMinus = c.GradeScale.BMinus,
-                        CPlus = c.GradeScale.CPlus, C = c.GradeScale.C, CMinus = c.GradeScale.CMinus,
-                        DPlus = c.GradeScale.DPlus, D = c.GradeScale.D, DMinus = c.GradeScale.DMinus
-                    } : null,
-                    Categories = new List<CategoryResponse>()
-                };
-            }).ToList(),
-            CreatedAt = s.CreatedAt
-        };
+        return match ?? throw new ValidationFailedException(
+            $"'{term}' is not a term. Use one of: {string.Join(", ", ValidTerms)}.");
     }
 }

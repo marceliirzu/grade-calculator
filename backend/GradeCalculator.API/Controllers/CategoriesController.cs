@@ -1,201 +1,170 @@
-using GradeCalculator.API.Filters;
-using Microsoft.AspNetCore.Authorization;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using GradeCalculator.API.Auth;
 using GradeCalculator.API.Data;
 using GradeCalculator.API.DTOs.Requests;
 using GradeCalculator.API.DTOs.Responses;
+using GradeCalculator.API.Grading;
 using GradeCalculator.API.Models;
+using GradeCalculator.API.Services;
+using GradeCalculator.API.Services.Interfaces;
 
 namespace GradeCalculator.API.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-[RequireActiveSubscription]
-public class CategoriesController : ControllerBase
+public class CategoriesController : ApiControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly AppDbContext _db;
+    private readonly IGradeReadService _grades;
 
-    public CategoriesController(AppDbContext context)
+    public CategoriesController(ICurrentUserAccessor currentUser, AppDbContext db, IGradeReadService grades)
+        : base(currentUser)
     {
-        _context = context;
+        _db = db;
+        _grades = grades;
     }
 
-    private int GetUserId() =>
-        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
-
-    // POST: api/categories
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<CategoryResponse>>> CreateCategory(CreateCategoryRequest request)
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Create(
+        [FromBody] CreateCategoryRequest request, CancellationToken cancellationToken)
     {
-        var cls = await _context.Classes.FindAsync(request.ClassId);
-        if (cls == null)
-            return NotFound(ApiResponse<CategoryResponse>.Fail("Class not found"));
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        await EnsureClassOwnedAsync(request.ClassId, userId, cancellationToken);
 
-        if (cls.UserId != GetUserId())
-            return Forbid();
-
-        var maxOrder = await _context.Categories
+        var nextSortOrder = request.SortOrder ?? await _db.Categories
             .Where(c => c.ClassId == request.ClassId)
-            .MaxAsync(c => (int?)c.SortOrder) ?? -1;
+            .Select(c => (int?)c.SortOrder)
+            .MaxAsync(cancellationToken) + 1 ?? 0;
 
-        var category = new Category
+        _db.Categories.Add(new Category
         {
             ClassId = request.ClassId,
-            Name = request.Name,
+            Name = request.Name.Trim(),
             Weight = request.Weight,
-            SortOrder = maxOrder + 1
-        };
+            SortOrder = nextSortOrder,
+            CreatedAt = DateTime.UtcNow,
+        });
 
-        _context.Categories.Add(category);
-        await _context.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
 
-        return CreatedAtAction(nameof(GetCategory), new { id = category.Id },
-            ApiResponse<CategoryResponse>.Ok(MapToResponse(category)));
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(request.ClassId, userId, cancellationToken)));
     }
 
-    // GET: api/categories/5
-    [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<CategoryResponse>>> GetCategory(int id)
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Update(
+        int id, [FromBody] UpdateCategoryRequest request, CancellationToken cancellationToken)
     {
-        var category = await _context.Categories
-            .Include(c => c.Class)
-            .Include(c => c.GradeItems)
-            .Include(c => c.Rules)
-            .FirstOrDefaultAsync(c => c.Id == id);
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var category = await LoadOwnedAsync(id, userId, cancellationToken);
 
-        if (category == null)
-            return NotFound(ApiResponse<CategoryResponse>.Fail("Category not found"));
+        if (request.Name is not null) category.Name = request.Name.Trim();
+        if (request.Weight is not null) category.Weight = request.Weight.Value;
+        if (request.SortOrder is not null) category.SortOrder = request.SortOrder.Value;
 
-        if (category.Class?.UserId != GetUserId())
-            return Forbid();
+        await _db.SaveChangesAsync(cancellationToken);
 
-        return Ok(ApiResponse<CategoryResponse>.Ok(MapToResponse(category)));
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(category.ClassId, userId, cancellationToken)));
     }
 
-    // PUT: api/categories/5
-    [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<CategoryResponse>>> UpdateCategory(int id, CreateCategoryRequest request)
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> Delete(int id, CancellationToken cancellationToken)
     {
-        var category = await _context.Categories
-            .Include(c => c.Class)
-            .FirstOrDefaultAsync(c => c.Id == id);
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var category = await LoadOwnedAsync(id, userId, cancellationToken);
+        var classId = category.ClassId;
 
-        if (category == null)
-            return NotFound(ApiResponse<CategoryResponse>.Fail("Category not found"));
+        _db.Categories.Remove(category);
+        await _db.SaveChangesAsync(cancellationToken);
 
-        if (category.Class?.UserId != GetUserId())
-            return Forbid();
-
-        category.Name = request.Name;
-        category.Weight = request.Weight;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(ApiResponse<CategoryResponse>.Ok(MapToResponse(category)));
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(classId, userId, cancellationToken)));
     }
 
-    // DELETE: api/categories/5
-    [HttpDelete("{id}")]
-    public async Task<ActionResult<ApiResponse<bool>>> DeleteCategory(int id)
+    // ---- Rules ----
+
+    [HttpPost("rules")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> CreateRule(
+        [FromBody] CreateRuleRequest request, CancellationToken cancellationToken)
     {
-        var category = await _context.Categories
-            .Include(c => c.Class)
-            .FirstOrDefaultAsync(c => c.Id == id);
+        var userId = await CurrentUserIdAsync(cancellationToken);
+        var category = await LoadOwnedAsync(request.CategoryId, userId, cancellationToken);
 
-        if (category == null)
-            return NotFound(ApiResponse<bool>.Fail("Category not found"));
-
-        if (category.Class?.UserId != GetUserId())
-            return Forbid();
-
-        _context.Categories.Remove(category);
-        await _context.SaveChangesAsync();
-
-        return Ok(ApiResponse<bool>.Ok(true, "Category deleted"));
-    }
-
-    // POST: api/categories/5/rules
-    [HttpPost("{id}/rules")]
-    public async Task<ActionResult<ApiResponse<RuleResponse>>> AddRule(int id, CreateRuleRequest request)
-    {
-        var category = await _context.Categories
-            .Include(c => c.Class)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
-        if (category == null)
-            return NotFound(ApiResponse<RuleResponse>.Fail("Category not found"));
-
-        if (category.Class?.UserId != GetUserId())
-            return Forbid();
-
-        if (!Enum.TryParse<RuleType>(request.Type, out var ruleType))
-            return BadRequest(ApiResponse<RuleResponse>.Fail("Invalid rule type"));
-
-        var rule = new Rule
+        if (!Enum.TryParse<RuleKind>(request.Type, ignoreCase: true, out var kind))
         {
-            CategoryId = id,
-            Type = ruleType,
-            Value = request.Value,
-            WeightDistribution = request.WeightDistribution != null
-                ? System.Text.Json.JsonSerializer.Serialize(request.WeightDistribution)
-                : null
-        };
+            throw new ValidationFailedException(
+                $"'{request.Type}' is not a rule type. Use DropLowest, CountHighest or WeightByScore.");
+        }
 
-        _context.Rules.Add(rule);
-        await _context.SaveChangesAsync();
+        string? weights = null;
 
-        return Ok(ApiResponse<RuleResponse>.Ok(new RuleResponse
+        if (kind == RuleKind.WeightByScore)
         {
-            Id = rule.Id,
-            Type = rule.Type.ToString(),
-            Value = rule.Value,
-            WeightDistribution = request.WeightDistribution
-        }));
+            if (request.WeightDistribution is not { Count: > 0 })
+                throw new ValidationFailedException("A WeightByScore rule needs a list of weights.");
+
+            if (request.WeightDistribution.Any(w => w < 0))
+                throw new ValidationFailedException("Weights cannot be negative.");
+
+            if (request.WeightDistribution.Sum() <= 0)
+                throw new ValidationFailedException("Weights must add up to more than zero.");
+
+            weights = JsonSerializer.Serialize(request.WeightDistribution);
+        }
+
+        // One rule of each kind per category. Two DropLowest rules would compose into a silent
+        // double-drop that no part of the UI communicates.
+        var existing = await _db.Rules
+            .FirstOrDefaultAsync(r => r.CategoryId == request.CategoryId && r.Type == kind, cancellationToken);
+
+        if (existing is not null)
+        {
+            existing.Value = request.Value;
+            existing.WeightDistribution = weights;
+        }
+        else
+        {
+            _db.Rules.Add(new Rule
+            {
+                CategoryId = request.CategoryId,
+                Type = kind,
+                Value = request.Value,
+                WeightDistribution = weights,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(category.ClassId, userId, cancellationToken)));
     }
 
-    // DELETE: api/categories/rules/5
-    [HttpDelete("rules/{ruleId}")]
-    public async Task<ActionResult<ApiResponse<bool>>> DeleteRule(int ruleId)
+    [HttpDelete("rules/{id:int}")]
+    public async Task<ActionResult<ApiResponse<ClassResponse>>> DeleteRule(int id, CancellationToken cancellationToken)
     {
-        var rule = await _context.Rules
+        var userId = await CurrentUserIdAsync(cancellationToken);
+
+        var rule = await _db.Rules
             .Include(r => r.Category)
-                .ThenInclude(c => c!.Class)
-            .FirstOrDefaultAsync(r => r.Id == ruleId);
+            .FirstOrDefaultAsync(r => r.Id == id && r.Category!.Class!.UserId == userId, cancellationToken)
+            ?? throw new ResourceNotFoundException("Rule", id);
 
-        if (rule == null)
-            return NotFound(ApiResponse<bool>.Fail("Rule not found"));
+        var classId = rule.Category!.ClassId;
 
-        if (rule.Category?.Class?.UserId != GetUserId())
-            return Forbid();
+        _db.Rules.Remove(rule);
+        await _db.SaveChangesAsync(cancellationToken);
 
-        _context.Rules.Remove(rule);
-        await _context.SaveChangesAsync();
-
-        return Ok(ApiResponse<bool>.Ok(true, "Rule deleted"));
+        return Ok(ApiResponse<ClassResponse>.Ok(await _grades.GetClassAsync(classId, userId, cancellationToken)));
     }
 
-    private CategoryResponse MapToResponse(Category c) => new()
+    // ---- Ownership ----
+
+    private async Task<Category> LoadOwnedAsync(int categoryId, int userId, CancellationToken cancellationToken) =>
+        await _db.Categories
+            .FirstOrDefaultAsync(c => c.Id == categoryId && c.Class!.UserId == userId, cancellationToken)
+        ?? throw new ResourceNotFoundException("Category", categoryId);
+
+    private async Task EnsureClassOwnedAsync(int classId, int userId, CancellationToken cancellationToken)
     {
-        Id = c.Id,
-        Name = c.Name,
-        Weight = c.Weight,
-        GradeItems = c.GradeItems?.Select(g => new GradeItemResponse
-        {
-            Id = g.Id,
-            Name = g.Name,
-            PointsEarned = g.PointsEarned,
-            PointsPossible = g.PointsPossible,
-            Percentage = g.GetPercentage(),
-            IsWhatIf = g.IsWhatIf
-        }).ToList() ?? new(),
-        Rules = c.Rules?.Select(r => new RuleResponse
-        {
-            Id = r.Id,
-            Type = r.Type.ToString(),
-            Value = r.Value
-        }).ToList() ?? new()
-    };
+        var exists = await _db.Classes.AnyAsync(c => c.Id == classId && c.UserId == userId, cancellationToken);
+        if (!exists) throw new ResourceNotFoundException("Class", classId);
+    }
 }

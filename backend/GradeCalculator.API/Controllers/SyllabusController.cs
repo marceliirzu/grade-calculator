@@ -1,38 +1,35 @@
-using Microsoft.AspNetCore.Authorization;
-using GradeCalculator.API.Filters;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using GradeCalculator.API.Auth;
 using GradeCalculator.API.DTOs.Requests;
 using GradeCalculator.API.DTOs.Responses;
 using GradeCalculator.API.Services.Interfaces;
 
 namespace GradeCalculator.API.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-[RequireActiveSubscription]
-public class SyllabusController : ControllerBase
+/// <summary>
+/// Syllabus parsing. Rate limited on top of the global limiter because this is the one
+/// unauthenticated-adjacent endpoint that can reach a paid provider.
+/// </summary>
+[EnableRateLimiting("llm")]
+public class SyllabusController : ApiControllerBase
 {
-    private readonly ISyllabusParserService _syllabusParser;
-    
-    public SyllabusController(ISyllabusParserService syllabusParser)
+    private readonly ISyllabusParserService _parser;
+
+    public SyllabusController(ICurrentUserAccessor currentUser, ISyllabusParserService parser)
+        : base(currentUser)
     {
-        _syllabusParser = syllabusParser;
+        _parser = parser;
     }
-    
-    // POST: api/syllabus/parse
+
     [HttpPost("parse")]
-    public async Task<ActionResult<ApiResponse<SyllabusParseResponse>>> ParseSyllabus(ParseSyllabusRequest request)
+    public async Task<ActionResult<ApiResponse<SyllabusParseResponse>>> Parse(
+        [FromBody] ParseSyllabusRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.SyllabusText))
-            return BadRequest(ApiResponse<SyllabusParseResponse>.Fail("Syllabus text is required"));
-        
-        // Limit input size to prevent abuse
-        if (request.SyllabusText.Length > 50000)
-            return BadRequest(ApiResponse<SyllabusParseResponse>.Fail("Syllabus text too long (max 50,000 characters)"));
-        
-        var result = await _syllabusParser.ParseSyllabusAsync(request.SyllabusText);
-        
+        var userId = await CurrentUserIdAsync(cancellationToken);
+
+        var result = await _parser.ParseSyllabusAsync(request.SyllabusText, userId, cancellationToken);
+
         return Ok(ApiResponse<SyllabusParseResponse>.Ok(result));
     }
 }

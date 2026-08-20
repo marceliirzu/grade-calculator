@@ -16,7 +16,7 @@ public static class DeterministicSyllabusParser
     public sealed class Result
     {
         public string? ClassName { get; set; }
-        public int? CreditHours { get; set; }
+        public decimal? CreditHours { get; set; }
         public List<ParsedCategory> Categories { get; set; } = new();
         public ParsedGradeScale? GradeScale { get; set; }
 
@@ -276,7 +276,7 @@ public static class DeterministicSyllabusParser
         return null;
     }
 
-    private static int? FindCreditHours(List<string> lines)
+    private static decimal? FindCreditHours(List<string> lines)
     {
         foreach (var line in lines.Take(40))
         {
@@ -291,7 +291,7 @@ public static class DeterministicSyllabusParser
                     : m.Groups["n3"].Value;
 
             if (decimal.TryParse(raw, out var n) && n is >= 1 and <= 12)
-                return (int)Math.Round(n);
+                return n; // 1.5-credit labs are real; rounding here would skew the GPA
         }
 
         return null;

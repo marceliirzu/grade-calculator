@@ -1,0 +1,163 @@
+/*
+ * Shell styles that used to live as inline `style` attributes and `cssText` assignments in the
+ * old JavaScript. Moved here so the markup carries no inline styles: that keeps the page
+ * compatible with a strict Content-Security-Policy, and makes these rules themeable and
+ * overridable like everything else.
+ */
+
+body {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+body.loaded {
+    opacity: 1;
+}
+
+/* ---- Logo ---- */
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2-5);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.logo-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(140deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    position: relative;
+}
+
+.logo-mark-text {
+    font-family: var(--font-family-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: -0.5px;
+}
+
+.logo-text {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    letter-spacing: -0.02em;
+}
+
+.logo-text-muted {
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+/* ---- A+ scale toggle ---- */
+
+.aplus-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-1-5) var(--spacing-2) var(--spacing-1-5) var(--spacing-3);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-spring);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-xs);
+    font-family: inherit;
+}
+
+.aplus-toggle:hover {
+    border-color: var(--color-border-light);
+    box-shadow: var(--shadow-sm);
+}
+
+.aplus-toggle:active {
+    transform: scale(0.96);
+}
+
+.aplus-toggle .toggle-label {
+    font-weight: 500;
+}
+
+.aplus-toggle .toggle-value {
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
+    padding: 2px 9px;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    font-family: var(--font-family-mono);
+    font-size: 12px;
+}
+
+/* Clerk injects its own button; this only reserves space so the header does not jump. */
+.clerk-user-button {
+    display: flex;
+    align-items: center;
+    min-width: 32px;
+    min-height: 32px;
+}
+
+/* ---- Loading skeletons ---- */
+
+.skeleton-card {
+    min-height: 168px;
+    border: none;
+    background-image: linear-gradient(
+        90deg,
+        var(--color-bg-secondary) 0%,
+        var(--color-bg-tertiary) 50%,
+        var(--color-bg-secondary) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-card {
+        animation: none;
+    }
+
+    body {
+        transition: none;
+    }
+}
+
+/* ---- Grading warning banner ---- */
+
+.grade-warning {
+    display: flex;
+    gap: var(--spacing-2);
+    align-items: flex-start;
+    padding: var(--spacing-3) var(--spacing-4);
+    margin-bottom: var(--spacing-4);
+    background: var(--color-warning-subtle, rgba(245, 158, 11, 0.12));
+    border: 1px solid var(--color-warning, #f59e0b);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+}
+
+/* Explains a drop-lowest rule on the category card, e.g. "best 8 of 10 count". */
+.category-counted {
+    margin-top: var(--spacing-1);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* Class and category cards act as buttons, so they need a visible keyboard focus ring. */
+.class-card:focus-visible,
+.category-card:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}

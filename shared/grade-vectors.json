@@ -1,0 +1,363 @@
+{
+  "version": 1,
+  "note": "Golden vectors for GRADING_SPEC.md. Consumed by backend/GradeCalculator.Tests (xUnit) and frontend/tests (Vitest). Percentages compare with tolerance 1e-6; GPAs compare exactly.",
+  "defaultScale": {
+    "aPlusGpaValue": 4.0,
+    "aPlus": 97, "a": 93, "aMinus": 90,
+    "bPlus": 87, "b": 83, "bMinus": 80,
+    "cPlus": 77, "c": 73, "cMinus": 70,
+    "dPlus": 67, "d": 63, "dMinus": 60
+  },
+  "classCases": [
+    {
+      "id": "basic-two-categories",
+      "spec": "4, 5",
+      "description": "Points-based aggregation across two weighted categories.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Homework", "weight": 30, "items": [
+          { "pointsEarned": 45, "pointsPossible": 50 },
+          { "pointsEarned": 38, "pointsPossible": 40 } ] },
+        { "name": "Exams", "weight": 70, "items": [
+          { "pointsEarned": 80, "pointsPossible": 100 },
+          { "pointsEarned": 90, "pointsPossible": 100 } ] }
+      ],
+      "expect": {
+        "categoryPercents": { "Homework": 92.22222222222222, "Exams": 85.0 },
+        "classPercent": 87.16666666666667,
+        "letter": "B+",
+        "classGpa": 3.33
+      }
+    },
+    {
+      "id": "aplus-gpa-value-4-33-is-honoured",
+      "spec": "7",
+      "description": "REGRESSION: class GPA must read aPlusGpaValue from the class scale, not the 4.0 default.",
+      "creditHours": 4,
+      "scale": { "aPlusGpaValue": 4.33 },
+      "categories": [
+        { "name": "Total", "weight": 100, "items": [ { "pointsEarned": 99, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 99.0, "letter": "A+", "classGpa": 4.33 }
+    },
+    {
+      "id": "weights-below-100-renormalise",
+      "spec": "5",
+      "description": "Participating weights form the denominator, not a hardcoded 100.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "A", "weight": 30, "items": [ { "pointsEarned": 80, "pointsPossible": 100 } ] },
+        { "name": "B", "weight": 30, "items": [ { "pointsEarned": 90, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 85.0, "letter": "B", "classGpa": 3.0 }
+    },
+    {
+      "id": "ungraded-category-excluded",
+      "spec": "5",
+      "description": "A category with no graded items must not drag the grade toward zero.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Done", "weight": 50, "items": [ { "pointsEarned": 90, "pointsPossible": 100 } ] },
+        { "name": "Pending", "weight": 50, "items": [ { "pointsEarned": null, "pointsPossible": 100 } ] }
+      ],
+      "expect": {
+        "categoryPercents": { "Done": 90.0, "Pending": null },
+        "classPercent": 90.0, "letter": "A-", "classGpa": 3.67
+      }
+    },
+    {
+      "id": "drop-lowest-basic",
+      "spec": "3",
+      "description": "DropLowest(1) removes the single worst item by percentage.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Quizzes", "weight": 100, "rules": [ { "type": "DropLowest", "value": 1 } ], "items": [
+          { "pointsEarned": 60, "pointsPossible": 100 },
+          { "pointsEarned": 80, "pointsPossible": 100 },
+          { "pointsEarned": 100, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 90.0, "letter": "A-", "classGpa": 3.67 }
+    },
+    {
+      "id": "drop-lowest-ranks-by-percent-then-sums-points",
+      "spec": "3, 4",
+      "description": "The dropped item is the lowest PERCENTAGE (80/100), not the lowest raw points (9/10).",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Mixed", "weight": 100, "rules": [ { "type": "DropLowest", "value": 1 } ], "items": [
+          { "pointsEarned": 9, "pointsPossible": 10 },
+          { "pointsEarned": 80, "pointsPossible": 100 },
+          { "pointsEarned": 100, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 99.09090909090909, "letter": "A+", "classGpa": 4.0 }
+    },
+    {
+      "id": "drop-lowest-tie-breaks-on-points-possible",
+      "spec": "2, 3",
+      "description": "8/10 and 80/100 are both exactly 80%. The tie-break (pointsPossible DESC) drops the 80/100 exam, leaving 108/110. Locks the comparator so bestFirst is not implemented as reverse(worstFirst).",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Tied", "weight": 100, "rules": [ { "type": "DropLowest", "value": 1 } ], "items": [
+          { "pointsEarned": 8, "pointsPossible": 10 },
+          { "pointsEarned": 80, "pointsPossible": 100 },
+          { "pointsEarned": 100, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 98.18181818181819, "letter": "A+", "classGpa": 4.0 }
+    },
+    {
+      "id": "count-highest",
+      "spec": "3",
+      "description": "CountHighest(2) keeps the two best items.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Exams", "weight": 100, "rules": [ { "type": "CountHighest", "value": 2 } ], "items": [
+          { "pointsEarned": 70, "pointsPossible": 100 },
+          { "pointsEarned": 85, "pointsPossible": 100 },
+          { "pointsEarned": 95, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 90.0, "letter": "A-", "classGpa": 3.67 }
+    },
+    {
+      "id": "drop-lowest-then-count-highest-order-is-fixed",
+      "spec": "3",
+      "description": "DropLowest runs first, then CountHighest, regardless of rule creation order.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Mixed", "weight": 100,
+          "rules": [ { "type": "CountHighest", "value": 2 }, { "type": "DropLowest", "value": 1 } ],
+          "items": [
+            { "pointsEarned": 50, "pointsPossible": 100 },
+            { "pointsEarned": 60, "pointsPossible": 100 },
+            { "pointsEarned": 70, "pointsPossible": 100 },
+            { "pointsEarned": 80, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 75.0, "letter": "C", "classGpa": 2.0 }
+    },
+    {
+      "id": "drop-count-exceeds-item-count-empties-category",
+      "spec": "3, 5",
+      "description": "Dropping more items than exist leaves nothing; the class has no grade at all.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Quizzes", "weight": 100, "rules": [ { "type": "DropLowest", "value": 3 } ], "items": [
+          { "pointsEarned": 50, "pointsPossible": 100 },
+          { "pointsEarned": 60, "pointsPossible": 100 } ] }
+      ],
+      "expect": {
+        "categoryPercents": { "Quizzes": null },
+        "classPercent": null, "letter": null, "classGpa": null
+      }
+    },
+    {
+      "id": "weight-by-score-exact-length",
+      "spec": "4",
+      "description": "Weights map to items ranked best-first: 90*50 + 80*30 + 70*20 over 100.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Exams", "weight": 100,
+          "rules": [ { "type": "WeightByScore", "weightDistribution": [50, 30, 20] } ],
+          "items": [
+            { "pointsEarned": 90, "pointsPossible": 100 },
+            { "pointsEarned": 80, "pointsPossible": 100 },
+            { "pointsEarned": 70, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 83.0, "letter": "B", "classGpa": 3.0 }
+    },
+    {
+      "id": "weight-by-score-length-mismatch-falls-back",
+      "spec": "4",
+      "description": "REGRESSION: a 3rd item with only 2 weights must NOT vanish; fall back to points-based and warn.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Exams", "weight": 100,
+          "rules": [ { "type": "WeightByScore", "weightDistribution": [50, 30] } ],
+          "items": [
+            { "pointsEarned": 90, "pointsPossible": 100 },
+            { "pointsEarned": 80, "pointsPossible": 100 },
+            { "pointsEarned": 70, "pointsPossible": 100 } ] }
+      ],
+      "expect": {
+        "classPercent": 80.0, "letter": "B-", "classGpa": 2.67,
+        "warnings": ["WeightByScoreLengthMismatch"]
+      }
+    },
+    {
+      "id": "zero-points-possible-item-excluded",
+      "spec": "1",
+      "description": "A malformed 10/0 item is excluded rather than causing a divide by zero.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "HW", "weight": 100, "items": [
+          { "pointsEarned": 10, "pointsPossible": 0 },
+          { "pointsEarned": 90, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 90.0, "letter": "A-", "classGpa": 3.67 }
+    },
+    {
+      "id": "boundary-exactly-on-threshold",
+      "spec": "6",
+      "description": "A band is inclusive of its own threshold: exactly 97 is an A+.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "T", "weight": 100, "items": [ { "pointsEarned": 97, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 97.0, "letter": "A+", "classGpa": 4.0 }
+    },
+    {
+      "id": "below-d-minus-is-f",
+      "spec": "6",
+      "description": "Anything under the D- threshold is an F.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "T", "weight": 100, "items": [ { "pointsEarned": 50, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 50.0, "letter": "F", "classGpa": 0.0 }
+    },
+    {
+      "id": "extra-credit-exceeds-100",
+      "spec": "1, 6",
+      "description": "Percentages are not clamped; 105% is a legitimate A+.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "T", "weight": 100, "items": [ { "pointsEarned": 105, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 105.0, "letter": "A+", "classGpa": 4.0 }
+    },
+    {
+      "id": "zero-weight-category-ignored",
+      "spec": "5",
+      "description": "A category weighted 0 contributes nothing even when it has grades.",
+      "creditHours": 3,
+      "categories": [
+        { "name": "Ungraded Practice", "weight": 0, "items": [ { "pointsEarned": 0, "pointsPossible": 100 } ] },
+        { "name": "Real", "weight": 100, "items": [ { "pointsEarned": 88, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "classPercent": 88.0, "letter": "B+", "classGpa": 3.33 }
+    }
+  ],
+  "gpaCases": [
+    {
+      "id": "credit-weighted-mean-rounds-to-2dp",
+      "spec": "7, 8",
+      "description": "(4.0*3 + 3.0*4) / 7 = 3.428571... -> 3.43",
+      "classes": [ { "gpa": 4.0, "creditHours": 3 }, { "gpa": 3.0, "creditHours": 4 } ],
+      "expect": { "gpa": 3.43 }
+    },
+    {
+      "id": "ungraded-class-excluded-from-both-sides",
+      "spec": "7",
+      "description": "A class with no grade must leave the denominator alone, not count as 0.0.",
+      "classes": [ { "gpa": 4.0, "creditHours": 3 }, { "gpa": null, "creditHours": 4 } ],
+      "expect": { "gpa": 4.0 }
+    },
+    {
+      "id": "no-graded-classes-is-null-not-zero",
+      "spec": "7",
+      "description": "Nothing graded yet reports null, never 0.0.",
+      "classes": [ { "gpa": null, "creditHours": 3 } ],
+      "expect": { "gpa": null }
+    },
+    {
+      "id": "zero-credit-total-is-null",
+      "spec": "7",
+      "description": "Zero participating credits must yield null rather than a 0.0 that reads as failure.",
+      "classes": [ { "gpa": 4.0, "creditHours": 0 } ],
+      "expect": { "gpa": null }
+    },
+    {
+      "id": "empty-class-list-is-null",
+      "spec": "7",
+      "description": "No classes at all is null.",
+      "classes": [],
+      "expect": { "gpa": null }
+    },
+    {
+      "id": "fractional-credit-hours",
+      "spec": "7",
+      "description": "REGRESSION: a 1.5-credit lab must weight as 1.5, not truncate to 1. (4.0*1.5 + 3.0*3) / 4.5 = 3.333... -> 3.33",
+      "classes": [ { "gpa": 4.0, "creditHours": 1.5 }, { "gpa": 3.0, "creditHours": 3 } ],
+      "expect": { "gpa": 3.33 }
+    },
+    {
+      "id": "half-away-from-zero-rounding",
+      "spec": "8",
+      "description": "3.005 must round to 3.01; banker's rounding would wrongly give 3.00.",
+      "classes": [ { "gpa": 3.005, "creditHours": 1 } ],
+      "expect": { "gpa": 3.01 }
+    }
+  ],
+  "targetCases": [
+    {
+      "id": "target-unreachable-reports-how-far",
+      "spec": "9",
+      "description": "Needs 106% on the final: report Unreachable but still surface the 106.",
+      "target": "A",
+      "categories": [
+        { "name": "Exams", "weight": 100, "items": [
+          { "pointsEarned": 80, "pointsPossible": 100 },
+          { "pointsEarned": null, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "status": "Unreachable", "needed": 106.0, "targetPercent": 93.0 }
+    },
+    {
+      "id": "target-achievable-exact-integer",
+      "spec": "9",
+      "description": "(80 + X) / 2 >= 83 -> X >= 86. Must report 86.00, not 86.01.",
+      "target": "B",
+      "categories": [
+        { "name": "Exams", "weight": 100, "items": [
+          { "pointsEarned": 80, "pointsPossible": 100 },
+          { "pointsEarned": null, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "status": "Achievable", "needed": 86.0, "targetPercent": 83.0 }
+    },
+    {
+      "id": "target-achievable-rounds-up",
+      "spec": "9",
+      "description": "X >= 86.666... must round UP to 86.67; rounding down would miss the target.",
+      "target": "B",
+      "categories": [
+        { "name": "HW", "weight": 40, "items": [ { "pointsEarned": 90, "pointsPossible": 100 } ] },
+        { "name": "Exams", "weight": 60, "items": [
+          { "pointsEarned": 70, "pointsPossible": 100 },
+          { "pointsEarned": null, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "status": "Achievable", "needed": 86.67, "targetPercent": 83.0 }
+    },
+    {
+      "id": "target-already-determined",
+      "spec": "9",
+      "description": "Nothing left to grade: needed is null.",
+      "target": "B+",
+      "categories": [
+        { "name": "T", "weight": 100, "items": [ { "pointsEarned": 88, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "status": "Determined", "needed": null, "targetPercent": 87.0 }
+    },
+    {
+      "id": "target-secured-even-with-zeros",
+      "spec": "9",
+      "description": "86.36% even if the remaining 10 points score 0, so a C is already locked in.",
+      "target": "C",
+      "categories": [
+        { "name": "T", "weight": 100, "items": [
+          { "pointsEarned": 95, "pointsPossible": 100 },
+          { "pointsEarned": null, "pointsPossible": 10 } ] }
+      ],
+      "expect": { "status": "Secured", "needed": null, "targetPercent": 73.0 }
+    },
+    {
+      "id": "target-respects-drop-lowest",
+      "spec": "9",
+      "description": "Bisection is required because DropLowest makes the curve non-linear: once the pending quiz beats 60, the 60 is dropped instead.",
+      "target": "A-",
+      "categories": [
+        { "name": "Quizzes", "weight": 100, "rules": [ { "type": "DropLowest", "value": 1 } ], "items": [
+          { "pointsEarned": 60, "pointsPossible": 100 },
+          { "pointsEarned": 95, "pointsPossible": 100 },
+          { "pointsEarned": null, "pointsPossible": 100 } ] }
+      ],
+      "expect": { "status": "Achievable", "needed": 85.0, "targetPercent": 90.0 }
+    }
+  ]
+}
