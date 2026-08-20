@@ -162,4 +162,50 @@ public class DeterministicSyllabusParserTests
 
         Assert.Equal(100m, Math.Round(normalized.Sum(c => c.Weight)));
     }
+
+    [Fact]
+    public void ConvertsAPointBasedGradeScaleUsingTheCategoryTotal()
+    {
+        // The whole syllabus is in points, including the scale. Previously the scale was
+        // discarded and the class silently inherited the standard 93/90/87 percentages.
+        var result = DeterministicSyllabusParser.Parse("""
+            PHYS 2425
+            Grading
+            Homework: 100 points
+            Midterm: 100 points
+            Final: 100 points
+
+            Grade Scale:
+            A: 270-300
+            B: 240-269
+            C: 210-239
+            D: 180-209
+            """);
+
+        Assert.Equal(300m, result.TotalPoints);
+        Assert.NotNull(result.GradeScale);
+        Assert.Equal(90m, result.GradeScale!.A);   // 270/300
+        Assert.Equal(80m, result.GradeScale.B);    // 240/300
+        Assert.Equal(70m, result.GradeScale.C);    // 210/300
+        Assert.Equal(60m, result.GradeScale.D);    // 180/300
+    }
+
+    [Fact]
+    public void IgnoresAPointBasedScaleWhenNoTotalCanBeDerived()
+    {
+        // Percentage categories give no point total, so there is no denominator. Falling back
+        // to the standard scale beats inventing one.
+        var result = DeterministicSyllabusParser.Parse("""
+            Homework: 50%
+            Exams: 50%
+
+            Grade Scale:
+            A: 270-300
+            B: 240-269
+            C: 210-239
+            D: 180-209
+            """);
+
+        Assert.Null(result.GradeScale);
+    }
 }

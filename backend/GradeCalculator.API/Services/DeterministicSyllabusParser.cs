@@ -18,6 +18,9 @@ public static class DeterministicSyllabusParser
         public string? ClassName { get; set; }
         public decimal? CreditHours { get; set; }
         public List<ParsedCategory> Categories { get; set; } = new();
+
+        /// <summary>Course point total when the syllabus is point-based; null otherwise.</summary>
+        public decimal? TotalPoints { get; set; }
         public ParsedGradeScale? GradeScale { get; set; }
 
         /// <summary>True when categories were found and reconcile to exactly 100%.</summary>
@@ -77,9 +80,15 @@ public static class DeterministicSyllabusParser
 
         result.ClassName = FindClassName(lines);
         result.CreditHours = FindCreditHours(lines);
-        result.GradeScale = FindGradeScale(lines);
 
         var (percentCats, pointCats) = FindCategories(lines);
+
+        // Categories are read before the scale, because a point-based scale ("A = 275") can
+        // only be turned into a percentage once the course total is known — and the summed
+        // category points are where that total comes from.
+        var totalPoints = pointCats.Count > 0 ? pointCats.Sum(c => c.Points) : (decimal?)null;
+        result.TotalPoints = totalPoints;
+        result.GradeScale = FindGradeScale(lines, totalPoints);
 
         // Prefer percentage categories when they reconcile; otherwise convert points.
         var chosen = ChooseCategories(percentCats, pointCats);
@@ -382,7 +391,7 @@ public static class DeterministicSyllabusParser
         return null;
     }
 
-    private static ParsedGradeScale? FindGradeScale(List<string> lines)
+    private static ParsedGradeScale? FindGradeScale(List<string> lines, decimal? totalPoints)
     {
         var thresholds = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
@@ -402,7 +411,22 @@ public static class DeterministicSyllabusParser
                 if (string.IsNullOrEmpty(letter) || string.IsNullOrEmpty(loRaw)) continue;
 
                 letter = letter.Replace('−', '-');
-                if (!decimal.TryParse(loRaw, out var lo) || lo is < 40 or > 100) continue;
+                if (!decimal.TryParse(loRaw, out var lo)) continue;
+
+                // A threshold above 100 is a point total, not a percentage. Previously these
+                // were discarded outright, so a course graded out of 300 points silently lost
+                // its scale and fell back to the standard 93/90/87 — which is simply a
+                // different course's grading policy.
+                if (lo > 100m)
+                {
+                    if (totalPoints is not > 0) continue;
+
+                    lo = Math.Round(Math.Min(lo / totalPoints.Value * 100m, 100m), 2, MidpointRounding.AwayFromZero);
+                }
+
+                // Below 40 is noise: page numbers, dates, room numbers. Even a generous scale
+                // does not put a D- under 40.
+                if (lo is < 40m or > 100m) continue;
 
                 if (!thresholds.ContainsKey(letter))
                     thresholds[letter] = lo;

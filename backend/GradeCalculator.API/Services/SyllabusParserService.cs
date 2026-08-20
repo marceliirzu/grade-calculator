@@ -43,23 +43,61 @@ public sealed class SyllabusParserService : ISyllabusParserService
     /// </summary>
     private const int AssumedLlmCallCost = 1800;
 
+    /// <summary>
+    /// Asks for the syllabus as written, not as converted.
+    ///
+    /// Earlier versions told the model to "convert each category to a percentage of total
+    /// points", which put the arithmetic in the least reliable place and had no way to express
+    /// a point-based grade scale at all — so a course marked out of 300 points, with
+    /// "A = 275-299", lost its scale entirely and silently fell back to the standard 93/90/87.
+    /// The model now reports units and raw numbers; SyllabusLlmConverter does the division.
+    /// </summary>
     private const string SystemPrompt =
         """
         You extract grading information from course syllabi. Respond with ONLY a JSON object:
         {
           "className": string|null,
           "creditHours": number|null,
-          "categories": [ { "name": string, "weight": number } ],
+          "totalPoints": number|null,
+          "categories": [ { "name": string, "weight": number|null, "points": number|null } ],
           "gradeScale": { "aPlus": n, "a": n, "aMinus": n, "bPlus": n, "b": n, "bMinus": n,
-                          "cPlus": n, "c": n, "cMinus": n, "dPlus": n, "d": n, "dMinus": n } | null
+                          "cPlus": n, "c": n, "cMinus": n, "dPlus": n, "d": n, "dMinus": n } | null,
+          "gradeScaleUnit": "percent" | "points"
         }
-        Rules:
-        - weights are percentages and MUST sum to exactly 100.
-        - If the syllabus uses points, convert each category to a percentage of total points.
-        - Merge numbered duplicates ("Exam 1", "Exam 2" -> "Exams") only when they share one weight pool.
-        - gradeScale values are the MINIMUM percentage for each letter; null if the syllabus has no scale.
-        - creditHours may be fractional (1.5); null if not stated.
+
+        Report the numbers exactly as the syllabus states them. Do NOT convert between points
+        and percentages, and do not do any arithmetic — that is handled for you. Your job is to
+        read accurately and say which unit you are reading.
+
+        categories
+        - If the syllabus gives a percentage, set "weight" and leave "points" null.
+        - If it gives a point value, set "points" and leave "weight" null.
+        - Never set both on the same category.
+        - Merge numbered duplicates ("Exam 1", "Exam 2" -> "Exams") only when the syllabus pools
+          them under a single weight. If each is listed separately with its own value, keep them
+          separate.
         - Do not invent categories that are not in the text.
+
+        totalPoints
+        - The total points available in the course, when the syllabus is point-based.
+        - Prefer a stated total ("1000 points total", "the course is out of 500 points").
+        - A grade scale often reveals it: if the top band reads "A+ = 285-300", the total is 300.
+        - Leave null if the syllabus is purely percentage-based, or if no total is stated and the
+          category points will simply be summed.
+
+        gradeScale
+        - The MINIMUM value needed for each letter.
+        - For a range, use the LOWER bound: "A = 275-299" -> 275, "B = 83-86%" -> 83.
+        - Omit letters the syllabus does not list; do not fill gaps with typical values.
+        - null if the syllabus states no scale at all.
+
+        gradeScaleUnit
+        - "points" when those numbers are point totals, e.g. "A = 275", "B+ = 250 points".
+        - "percent" when they are percentages, e.g. "A = 93-100%", "B = 83".
+        - When a syllabus is point-based overall but writes its scale in percentages, that is
+          "percent" — describe the scale itself, not the rest of the syllabus.
+
+        creditHours may be fractional (1.5); null if not stated.
         """;
 
     private readonly AppDbContext _db;
@@ -107,6 +145,7 @@ public sealed class SyllabusParserService : ISyllabusParserService
                 CreditHours = deterministic.CreditHours,
                 Categories = deterministic.Categories,
                 GradeScale = deterministic.GradeScale,
+                TotalPoints = deterministic.TotalPoints,
                 Source = "deterministic",
                 TokensUsed = 0,
                 Notes = { "Read directly from the grading table — no AI needed." },
@@ -119,7 +158,7 @@ public sealed class SyllabusParserService : ISyllabusParserService
 
         if (cached is not null)
         {
-            var restored = Deserialize(cached.ResultJson);
+            var restored = DeserializeCached(cached.ResultJson);
             if (restored is not null)
             {
                 cached.HitCount++;
@@ -184,6 +223,7 @@ public sealed class SyllabusParserService : ISyllabusParserService
                 CreditHours = deterministic.CreditHours,
                 Categories = DeterministicSyllabusParser.NormalizeTo100(deterministic.Categories),
                 GradeScale = deterministic.GradeScale,
+                TotalPoints = deterministic.TotalPoints,
                 Source = "deterministic",
                 TokensUsed = 0,
                 Notes = { "The weights did not add up to 100%, so they were scaled proportionally. Please check them." },
@@ -235,12 +275,14 @@ public sealed class SyllabusParserService : ISyllabusParserService
             // Recorded even on a failed parse: the tokens were spent regardless of the outcome.
             await _usage.RecordSpendAsync(userId, LlmFeature.SyllabusParse, completion, succeeded: true, cancellationToken);
 
-            var parsed = Deserialize(completion.Content);
+            var reply = DeserializeReply(completion.Content);
 
-            if (parsed is { Categories.Count: > 0 })
+            if (reply is { Categories.Count: > 0 })
             {
-                parsed.Categories = DeterministicSyllabusParser.NormalizeTo100(parsed.Categories);
-                return (parsed, totalTokens);
+                // Units and raw numbers in; percentages out. All arithmetic is done in C#.
+                var converted = SyllabusLlmConverter.Convert(reply);
+
+                if (converted.Categories.Count > 0) return (converted, totalTokens);
             }
 
             if (attempt < _settings.MaxValidationRetries)
@@ -270,6 +312,11 @@ public sealed class SyllabusParserService : ISyllabusParserService
         CreditHours = deterministic.CreditHours ?? llm.CreditHours,
         Categories = llm.Categories,
         GradeScale = deterministic.GradeScale ?? llm.GradeScale,
+        TotalPoints = deterministic.TotalPoints ?? llm.TotalPoints,
+
+        // Conversion notes ("weights were converted from points out of 1000") explain a number
+        // the student would otherwise have to take on faith, so they survive the merge.
+        Notes = llm.Notes,
     };
 
     private async Task CacheAsync(
@@ -308,18 +355,41 @@ public sealed class SyllabusParserService : ISyllabusParserService
         }
     }
 
-    private static SyllabusParseResponse? Deserialize(string raw)
+    /// <summary>
+    /// Reads a cached parse. The cache stores the already-converted response, so this is a
+    /// plain deserialize — distinct from the model reply, which is raw and still in whatever
+    /// units the syllabus used.
+    /// </summary>
+    private static SyllabusParseResponse? DeserializeCached(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
 
-        // JSON mode should return a bare object, but a stray prose wrapper is cheap to survive.
+        try
+        {
+            return JsonSerializer.Deserialize<SyllabusParseResponse>(raw, Json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads the model's reply. Without a schema constraining the response, a stray sentence
+    /// either side of the object is possible, so the outermost braces are located rather than
+    /// assuming the whole string is JSON.
+    /// </summary>
+    private static SyllabusLlmReply? DeserializeReply(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
         var start = raw.IndexOf('{');
         var end = raw.LastIndexOf('}');
         if (start < 0 || end <= start) return null;
 
         try
         {
-            return JsonSerializer.Deserialize<SyllabusParseResponse>(raw[start..(end + 1)], Json);
+            return JsonSerializer.Deserialize<SyllabusLlmReply>(raw[start..(end + 1)], Json);
         }
         catch (JsonException)
         {

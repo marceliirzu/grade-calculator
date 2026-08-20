@@ -169,6 +169,22 @@ user's behalf, cheapest first, and reports which path produced the result:
    `Llm:MaxInputChars`, schema-constrained, with one corrective retry.
 4. **Partial deterministic output** — so a failed parse still gives something to correct.
 
+### Point-based syllabi
+
+A course graded out of points rather than percentages is handled end to end, including a
+point-based grade scale (`A = 275-299` out of 300). Both parsers convert to percentages using
+the course point total — taken from a stated total where the syllabus gives one, otherwise
+summed from the category points.
+
+**The model never does the arithmetic.** It is asked to report what the syllabus says, in the
+unit the syllabus uses, plus a `gradeScaleUnit` of `"percent"` or `"points"`; the division
+happens in C#. Asking a model to convert 275/300 gets the right answer nearly always, and a
+wrong grade scale is invisible until a student is told they have a B when they have an A.
+
+If a scale is point-based but no total can be derived, it is discarded and the standard scale
+applies — inventing a denominator would be worse. Converted scales are validated for range and
+strict descent before being accepted, and every conversion adds a note the UI shows.
+
 The grade advisor makes exactly **one** call per question. It computes the student's grades
 server-side with the same engine that renders the UI, packs them into a compact snapshot, and
 sends that — instead of giving a model tools and letting it loop.

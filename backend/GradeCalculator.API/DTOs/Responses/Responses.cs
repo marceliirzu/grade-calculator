@@ -172,6 +172,12 @@ public class SyllabusParseResponse
     public List<ParsedCategory> Categories { get; set; } = new();
     public ParsedGradeScale? GradeScale { get; set; }
 
+    /// <summary>
+    /// Total points in the course, when the syllabus was point-based. Informational: the
+    /// categories and grade scale above are already normalised to percentages.
+    /// </summary>
+    public decimal? TotalPoints { get; set; }
+
     /// <summary>"deterministic" | "cache" | "llm" — surfaced so the UI can say how it was parsed.</summary>
     public string Source { get; set; } = "deterministic";
 
