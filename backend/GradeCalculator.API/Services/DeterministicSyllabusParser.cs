@@ -98,40 +98,125 @@ public static class DeterministicSyllabusParser
     }
 
     /// <summary>
-    /// Reduces a full syllabus to only grading-relevant lines (plus the header)
-    /// so the LLM fallback reads a fraction of the tokens.
+    /// Reduces a full syllabus to the lines most likely to describe grading, so the LLM
+    /// fallback reads a fraction of the tokens.
+    ///
+    /// Lines are selected by <em>relevance</em>, then emitted in document order. The previous
+    /// version selected in document order and stopped at the character budget, which meant a
+    /// syllabus with a long attendance or academic-integrity section before its grading table
+    /// spent the entire budget on policy prose and cut the grading table off completely — the
+    /// model then correctly reported "no categories", and the parse died at the last tier.
+    /// Real syllabi bury the grading table on page three, so this was the common case, not the
+    /// edge case.
     /// </summary>
     public static string TrimForLlm(string text, int maxChars = 6000)
     {
         var lines = Normalize(text);
+        if (lines.Count == 0) return string.Empty;
+
+        var scores = new int[lines.Count];
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            scores[i] = ScoreLine(lines[i], i);
+        }
+
+        // Give the neighbours of a strong line a share of its score. Grading tables are often
+        // split across rows, and a header ("Grading:") is worthless without the rows beneath it.
+        var boosted = (int[])scores.Clone();
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (scores[i] < StrongSignal) continue;
+
+            if (i > 0) boosted[i - 1] = Math.Max(boosted[i - 1], ContextScore);
+            if (i + 1 < lines.Count) boosted[i + 1] = Math.Max(boosted[i + 1], ContextScore);
+            if (i + 2 < lines.Count) boosted[i + 2] = Math.Max(boosted[i + 2], ContextScore);
+        }
+
+        // Highest-scoring lines claim the budget first...
         var keep = new bool[lines.Count];
+        var used = 0;
 
-        // Always keep the first lines — course title usually lives there.
-        for (var i = 0; i < Math.Min(8, lines.Count); i++) keep[i] = true;
-
-        for (var i = 0; i < lines.Count; i++)
+        foreach (var index in Enumerable.Range(0, lines.Count)
+                     .Where(i => boosted[i] > 0)
+                     .OrderByDescending(i => boosted[i])
+                     .ThenBy(i => i))
         {
-            var lower = lines[i].ToLowerInvariant();
-            if (GradingKeywords.Any(k => lower.Contains(k)))
-            {
-                // keep one line of context on each side (tables often split rows)
-                if (i > 0) keep[i - 1] = true;
-                keep[i] = true;
-                if (i + 1 < lines.Count) keep[i + 1] = true;
-            }
+            var cost = lines[index].Length + 1;
+            if (used + cost > maxChars) continue; // skip, don't stop: a later line may still fit
+
+            keep[index] = true;
+            used += cost;
         }
 
-        var sb = new StringBuilder();
+        // ...but the excerpt is assembled in document order, so the model sees a coherent
+        // document rather than a relevance-ranked jumble.
+        //
+        // A newline is appended explicitly rather than via AppendLine, which emits a
+        // carriage-return pair on Windows: that is two characters against a budget costed at
+        // one, so the excerpt would overrun the cap by a byte per line.
+        var builder = new StringBuilder(used);
         for (var i = 0; i < lines.Count; i++)
         {
-            if (!keep[i]) continue;
-            sb.AppendLine(lines[i]);
-            if (sb.Length >= maxChars) break;
+            if (keep[i]) builder.Append(lines[i]).Append(LineSeparator);
         }
 
-        var trimmed = sb.ToString();
-        return trimmed.Length > 0 ? trimmed[..Math.Min(trimmed.Length, maxChars)] : text[..Math.Min(text.Length, maxChars)];
+        var trimmed = builder.ToString();
+
+        return trimmed.Length > 0
+            ? trimmed
+            : text[..Math.Min(text.Length, maxChars)];
     }
+
+    /// <summary>Line separator for the excerpt. Always one character, so the budget is exact.</summary>
+    private const char LineSeparator = (char)10;
+
+    /// <summary>Score at or above which a line pulls its neighbours in as context.</summary>
+    private const int StrongSignal = 6;
+
+    /// <summary>Score given to a line adjacent to a strong signal.</summary>
+    private const int ContextScore = 3;
+
+    /// <summary>
+    /// How likely a line is to carry grading information. A weight row beats a section header,
+    /// which beats a passing mention of the word "exam" in a policy paragraph.
+    /// </summary>
+    private static int ScoreLine(string line, int index)
+    {
+        var lower = line.ToLowerInvariant();
+
+        // An actual weight row — the thing we are ultimately looking for.
+        if (PercentLine.IsMatch(line) || PercentFirstLine.IsMatch(line) || PointsLine.IsMatch(line))
+            return 10;
+
+        // Any percentage at all, e.g. a grade-scale row.
+        if (AnyPercent.IsMatch(line)) return 8;
+
+        // A heading that introduces the breakdown.
+        if (GradingHeading.IsMatch(lower)) return 7;
+
+        // A points figure that did not match the stricter row pattern.
+        if (AnyPoints.IsMatch(lower)) return 5;
+
+        // The course title and credit hours usually sit at the very top and are cheap to keep.
+        if (index < 8) return 4;
+
+        // A bare topical keyword. Deliberately the weakest signal: "attendance is required" is
+        // prose, not a grading table, and it used to outrank the table purely by appearing first.
+        if (GradingKeywords.Any(keyword => lower.Contains(keyword))) return 1;
+
+        return 0;
+    }
+
+    private static readonly Regex AnyPercent = new(@"\d\s*%", RegexOptions.Compiled);
+
+    private static readonly Regex AnyPoints = new(
+        @"\d+\s*(?:points|pts?)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex GradingHeading = new(
+        @"^\s*(?:course\s+)?(?:grade|grading|evaluation|assessment|weight)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
 
     // ---------------- internals ----------------
 
