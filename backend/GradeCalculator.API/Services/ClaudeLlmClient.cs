@@ -17,14 +17,19 @@ namespace GradeCalculator.API.Services;
 /// <see cref="SyllabusParserService"/>, which reaches this class only after a deterministic
 /// pass and a shared cache have both failed.
 ///
-/// Two Claude-specific details that differ from the OpenAI client this replaces:
+/// Three Claude-specific details that differ from the OpenAI client this replaces:
 ///
 /// 1. <b>No temperature.</b> Sampling parameters were removed on Sonnet 5 and are rejected with
-///    a 400. Determinism comes from the structured-output schema instead, which is a stronger
-///    guarantee than asking for low temperature and hoping.
-/// 2. <b>Structured outputs, not "JSON mode".</b> A JSON Schema is supplied via
-///    <c>OutputConfig.Format</c> and enforced by the API, so a malformed shape cannot come back
-///    at all — where OpenAI's json_object mode only promised syntactically valid JSON.
+///    a 400, so there is no knob to turn down. Consistency comes from a tightly specified
+///    system prompt and from the caller validating what comes back.
+/// 2. <b>Every request streams.</b> Not for progress — nothing renders token by token — but
+///    because a non-streaming call holds one response open for the whole generation and was
+///    being killed by the client timeout.
+/// 3. <b>No structured outputs.</b> A JSON Schema would let the API enforce the shape rather
+///    than merely ask for it, and that was the first implementation. But a new schema carries a
+///    one-time compilation cost, every request timed out before it completed, and the schema
+///    was therefore never cached — so each retry paid it again. Worth revisiting once the call
+///    is comfortably fast; not worth the failure mode now.
 /// </summary>
 public sealed class ClaudeLlmClient : ILlmClient
 {
@@ -71,19 +76,21 @@ public sealed class ClaudeLlmClient : ILlmClient
             System = systemPrompt,
             Messages = [new() { Role = Role.User, Content = userContent }],
 
-            OutputConfig = new OutputConfig
-            {
-                // Schema-enforced output. The service can deserialize the reply directly
-                // instead of hunting for the first '{' in a prose wrapper.
-                Format = new JsonOutputFormat { Schema = SyllabusSchema.Value },
+            // Deliberately NOT using structured outputs here.
+            //
+            // A JSON Schema looked like the right tool -- the API enforces the shape rather than
+            // asking for it -- but a new schema carries a one-time compilation cost on first
+            // use. Every request timed out before that finished, so the schema was never cached
+            // and each retry paid the cost again: a loop that could not escape itself. The
+            // system prompt already specifies the exact shape, and the caller parses
+            // defensively and validates the result, so the guarantee was not worth the risk.
+            OutputConfig = new OutputConfig { Effort = Effort.Low },
 
-                // Extraction from a grading table is mechanical, not a reasoning problem.
-                // Low effort keeps latency and spend down; adaptive thinking still lets Claude
-                // spend more on a genuinely messy syllabus.
-                Effort = Effort.Low,
-            },
-
-            Thinking = new ThinkingConfigAdaptive(),
+            // Thinking off for this call. Reading a grading table is mechanical extraction, not
+            // reasoning, and thinking tokens both count against MaxTokens and add latency to a
+            // request that had already proved it could exceed two minutes. The advisor, which
+            // does reason about a student's situation, keeps adaptive thinking on.
+            Thinking = new ThinkingConfigDisabled(),
         };
 
         return await SendAsync(client, parameters, cancellationToken);
@@ -155,6 +162,8 @@ public sealed class ClaudeLlmClient : ILlmClient
         var promptTokens = 0;
         var completionTokens = 0;
         StopReason? stopReason = null;
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
@@ -229,6 +238,10 @@ public sealed class ClaudeLlmClient : ILlmClient
                 "The AI could not process that content. Try pasting just the grading section.");
         }
 
+        _logger.LogInformation(
+            "Claude replied in {Elapsed}ms ({Prompt} in, {Completion} out).",
+            stopwatch.ElapsedMilliseconds, promptTokens, completionTokens);
+
         return new LlmCompletion(
             Content: text.ToString(),
             PromptTokens: promptTokens,
@@ -240,64 +253,4 @@ public sealed class ClaudeLlmClient : ILlmClient
     private AnthropicClient RequireClient() =>
         _client ?? throw new FeatureUnavailableException(
             "AI features are not configured on this deployment (no Llm__ApiKey set).");
-
-    /// <summary>
-    /// JSON Schema the syllabus reply must satisfy. Built once — it is constant, and rebuilding
-    /// per request would allocate on every parse.
-    /// </summary>
-    private static class SyllabusSchema
-    {
-        public static readonly Dictionary<string, JsonElement> Value = Build();
-
-        private static Dictionary<string, JsonElement> Build()
-        {
-            var scaleProperties = new Dictionary<string, object>();
-            foreach (var key in new[]
-                     {
-                         "aPlus", "a", "aMinus", "bPlus", "b", "bMinus",
-                         "cPlus", "c", "cMinus", "dPlus", "d", "dMinus",
-                     })
-            {
-                scaleProperties[key] = new { type = new[] { "number", "null" } };
-            }
-
-            var schema = new
-            {
-                type = "object",
-                properties = new
-                {
-                    className = new { type = new[] { "string", "null" } },
-                    creditHours = new { type = new[] { "number", "null" } },
-                    categories = new
-                    {
-                        type = "array",
-                        items = new
-                        {
-                            type = "object",
-                            properties = new
-                            {
-                                name = new { type = "string" },
-                                weight = new { type = "number" },
-                            },
-                            required = new[] { "name", "weight" },
-                            additionalProperties = false,
-                        },
-                    },
-                    gradeScale = new
-                    {
-                        type = new[] { "object", "null" },
-                        properties = scaleProperties,
-                        additionalProperties = false,
-                    },
-                },
-                required = new[] { "categories" },
-                additionalProperties = false,
-            };
-
-            var serialized = JsonSerializer.SerializeToElement(schema, SerializerOptions);
-
-            return serialized.EnumerateObject()
-                .ToDictionary(property => property.Name, property => property.Value.Clone());
-        }
-    }
 }
