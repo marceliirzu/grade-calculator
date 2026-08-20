@@ -143,6 +143,8 @@ public sealed class SyllabusParserService : ISyllabusParserService
         }
 
         // ---- Tier 3: LLM on a trimmed excerpt ----
+        var llmAttemptedAndFailed = false;
+
         if (_llm.IsConfigured && userId is not null)
         {
             await _usage.EnsureWithinQuotaAsync(userId.Value, cancellationToken);
@@ -165,6 +167,10 @@ public sealed class SyllabusParserService : ISyllabusParserService
                 await CacheAsync(hash, response, "llm", _llm.Model, parsed.Value.Tokens, cancellationToken);
                 return response;
             }
+
+            // The model was reached but produced nothing usable. Remembered so the final error
+            // can say what actually happened rather than blaming the syllabus.
+            llmAttemptedAndFailed = true;
         }
 
         // ---- Tier 4: partial deterministic output beats an error ----
@@ -184,9 +190,15 @@ public sealed class SyllabusParserService : ISyllabusParserService
             };
         }
 
+        // Two very different failures used to share one message. Telling a user "no grading
+        // categories could be found" after the model timed out is simply untrue, and sends them
+        // off to re-edit a syllabus that was never the problem.
         throw new ValidationFailedException(
-            "No grading categories could be found in this syllabus. " +
-            "Try pasting just the grading or evaluation section.");
+            llmAttemptedAndFailed
+                ? "The AI could not finish reading this syllabus. Try pasting just the grading " +
+                  "or evaluation section, or add the categories by hand."
+                : "No grading categories could be found in this syllabus. " +
+                  "Try pasting just the grading or evaluation section.");
     }
 
     // -----------------------------------------------------------------------

@@ -29,10 +29,10 @@ public sealed class LlmSettings
     public int MaxInputChars { get; set; } = 6000;
 
     /// <summary>Output ceiling. A category list plus a grade scale fits comfortably in this.</summary>
-    public int MaxOutputTokens { get; set; } = 1500;
+    public int MaxOutputTokens { get; set; } = 8000;
 
     /// <summary>Ceiling for a single advisor reply.</summary>
-    public int MaxAdvisorOutputTokens { get; set; } = 1000;
+    public int MaxAdvisorOutputTokens { get; set; } = 4000;
 
     /// <summary>
     /// Conversation turns retained before the oldest are dropped. History is resent in full on
@@ -50,7 +50,7 @@ public sealed class LlmSettings
     public int DailyTokenLimitPerUser { get; set; } = 40000;
 
     /// <summary>Request timeout. A hung provider call must not hold a request thread forever.</summary>
-    public int TimeoutSeconds { get; set; } = 60;
+    public int TimeoutSeconds { get; set; } = 120;
 
     /// <summary>Retries for a <em>malformed</em> response. Transport failures are retried by the SDK.</summary>
     public int MaxValidationRetries { get; set; } = 1;

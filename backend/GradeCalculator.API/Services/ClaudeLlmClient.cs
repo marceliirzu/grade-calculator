@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Anthropic;
 using Anthropic.Exceptions;
@@ -134,16 +135,57 @@ public sealed class ClaudeLlmClient : ILlmClient
         return await SendAsync(client, parameters, cancellationToken);
     }
 
+    /// <summary>
+    /// Sends the request as a <b>stream</b> and reassembles the reply.
+    ///
+    /// Streaming is not about showing progress here — nothing renders token by token. It is
+    /// about not dying. A non-streaming call holds one HTTP response open for the entire
+    /// generation, and with adaptive thinking a hard syllabus routinely ran past sixty seconds
+    /// and was killed by the client timeout. The user then waited a minute to be told "no
+    /// grading categories found", which was both wrong and expensive. A streamed response keeps
+    /// data flowing, so the connection never idles out.
+    /// </summary>
     private async Task<LlmCompletion> SendAsync(
         AnthropicClient client,
         MessageCreateParams parameters,
         CancellationToken cancellationToken)
     {
-        Message response;
+        var text = new StringBuilder();
+
+        var promptTokens = 0;
+        var completionTokens = 0;
+        StopReason? stopReason = null;
 
         try
         {
-            response = await client.Messages.Create(parameters, cancellationToken: cancellationToken);
+            await foreach (var streamEvent in client.Messages.CreateStreaming(parameters, cancellationToken))
+            {
+                // Input usage arrives once, on the opening event.
+                if (streamEvent.TryPickStart(out var start))
+                {
+                    promptTokens = (int)start.Message.Usage.InputTokens;
+                    continue;
+                }
+
+                // Text arrives in deltas. Thinking blocks stream as their own delta type and are
+                // deliberately not collected — only the schema-shaped answer is wanted.
+                if (streamEvent.TryPickContentBlockDelta(out var contentDelta))
+                {
+                    if (contentDelta.Delta.TryPickText(out var textDelta)) text.Append(textDelta.Text);
+                    continue;
+                }
+
+                // The closing event carries the final output usage and the stop reason.
+                if (streamEvent.TryPickDelta(out var messageDelta))
+                {
+                    completionTokens = (int)messageDelta.Usage.OutputTokens;
+
+                    // Nullable on the wire: guard before the implicit enum conversion, which
+                    // rejects null rather than yielding a default.
+                    var rawStopReason = messageDelta.Delta.StopReason;
+                    if (rawStopReason is not null) stopReason = rawStopReason;
+                }
+            }
         }
         catch (AnthropicRateLimitException ex)
         {
@@ -160,36 +202,40 @@ public sealed class ClaudeLlmClient : ILlmClient
             throw new FeatureUnavailableException(
                 "The AI service is temporarily unavailable. Please try again in a moment.");
         }
-
-        var text = string.Concat(
-            response.Content
-                .Select(block => block.Value)
-                .OfType<TextBlock>()
-                .Select(block => block.Text));
-
-        // A truncated reply is usually unusable JSON, which would otherwise surface as a
-        // confusing parse failure rather than a tunable token ceiling.
-        if (response.StopReason == StopReason.MaxTokens)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Claude response hit the output token ceiling and was truncated.");
+            // Cancellation the caller did not ask for is the client timeout firing.
+            _logger.LogError("Claude request exceeded the {Timeout}s timeout.", _settings.TimeoutSeconds);
+
+            throw new FeatureUnavailableException(
+                "The AI took too long to read that syllabus. Try pasting just the grading section.");
         }
 
-        // Safety classifiers can decline a request with HTTP 200. Reading Content without
-        // checking would yield an empty string and look like an unexplained blank answer.
-        if (response.StopReason == StopReason.Refusal)
+        // A truncated reply is unusable against a schema, and would otherwise surface as a
+        // confusing parse failure rather than a tunable token ceiling.
+        if (stopReason == StopReason.MaxTokens)
         {
-            _logger.LogWarning("Claude declined the request: {Category}", response.StopDetails?.Category);
+            _logger.LogWarning(
+                "Claude hit the {Max}-token ceiling; the reply is truncated.", parameters.MaxTokens);
+        }
+
+        // Safety classifiers can decline with HTTP 200. Returning the empty string here would
+        // look like an unexplained blank answer.
+        if (stopReason == StopReason.Refusal)
+        {
+            _logger.LogWarning("Claude declined the request.");
 
             throw new FeatureUnavailableException(
                 "The AI could not process that content. Try pasting just the grading section.");
         }
 
         return new LlmCompletion(
-            Content: text,
-            PromptTokens: (int)response.Usage.InputTokens,
-            CompletionTokens: (int)response.Usage.OutputTokens,
+            Content: text.ToString(),
+            PromptTokens: promptTokens,
+            CompletionTokens: completionTokens,
             Model: _settings.Model);
     }
+
 
     private AnthropicClient RequireClient() =>
         _client ?? throw new FeatureUnavailableException(
