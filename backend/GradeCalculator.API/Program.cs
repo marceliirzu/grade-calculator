@@ -202,7 +202,9 @@ builder.Services.AddScoped<ILlmUsageTracker, LlmUsageTracker>();
 builder.Services.AddScoped<ISyllabusParserService, SyllabusParserService>();
 builder.Services.AddScoped<IGradeAdvisorService, GradeAdvisorService>();
 
-builder.Services.AddHttpClient<ILlmClient, OpenAiLlmClient>();
+// Claude client. Registered as a singleton: AnthropicClient is thread-safe and holds a
+// pooled HttpClient, so building one per request would churn connections needlessly.
+builder.Services.AddSingleton<ILlmClient, ClaudeLlmClient>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

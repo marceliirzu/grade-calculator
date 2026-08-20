@@ -118,7 +118,7 @@ JWKS, discovered from the authority URL, so signing keys rotate with no deploy.
 | `Clerk__AuthorizedParties__0` | `https://calcyourgpa.com` (your site origin) | strongly recommended |
 | `Cors__AllowedOrigins__0` | `https://calcyourgpa.com` | **yes** |
 | `MYSQL_URL` *or* `ConnectionStrings__DefaultConnection` | From the attached MySQL plugin | **yes** |
-| `Llm__ApiKey` | OpenAI key | optional |
+| `Llm__ApiKey` | Anthropic key (`sk-ant-...`) | optional |
 | `Llm__DailyTokenLimitPerUser` | Defaults to 40000 | optional |
 
 `AuthorizedParties` is not optional in spirit: Clerk session tokens carry no `aud` claim, so the
@@ -147,7 +147,17 @@ changing nothing about their exposure, and would falsely imply the site keeps th
 
 ## How the AI stays cheap
 
-Syllabus parsing tries four tiers, cheapest first, and only falls through on failure:
+The model is **Claude Sonnet 5** (`claude-sonnet-5`) via the official Anthropic SDK. Sonnet
+rather than Opus because syllabus extraction is a mechanical task, not a reasoning one, and the
+request runs at `effort: low` with adaptive thinking — Claude spends more only on a genuinely
+messy syllabus.
+
+Output is constrained by a **JSON Schema** (`output_config.format`), so a malformed shape cannot
+come back at all. Note that `temperature` is not sent: sampling parameters were removed on
+Sonnet 5 and are rejected with a 400. Determinism comes from the schema instead.
+
+There is **one shared flow** in the UI — no "smart vs AI" choice. The app escalates on the
+user's behalf, cheapest first, and reports which path produced the result:
 
 1. **Deterministic regex pass** — zero tokens. When the weights it finds reconcile to 100%, no
    model is involved at all. This handles most real syllabi, because a grading table is
@@ -155,8 +165,8 @@ Syllabus parsing tries four tiers, cheapest first, and only falls through on fai
 2. **Shared parse cache** — zero tokens, keyed by a SHA-256 of the *normalised* text. Students in
    one course upload the same document; the second one through is free. Only the extracted
    structure is stored, never the syllabus itself.
-3. **LLM on a trimmed excerpt** — the grading-relevant lines only, hard-capped at
-   `Llm:MaxInputChars`, in strict JSON mode at temperature 0, with one corrective retry.
+3. **Claude on a trimmed excerpt** — the grading-relevant lines only, hard-capped at
+   `Llm:MaxInputChars`, schema-constrained, with one corrective retry.
 4. **Partial deterministic output** — so a failed parse still gives something to correct.
 
 The grade advisor makes exactly **one** call per question. It computes the student's grades

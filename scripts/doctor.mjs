@@ -175,9 +175,16 @@ if (!devSettingsRaw) {
       'and VITE_CLERK_PUBLISHABLE_KEY in frontend/.env.local.');
 
     const llmKey = devSettings.Llm?.ApiKey ?? '';
-    if (llmKey) pass('LLM key present — AI syllabus fallback and advisor enabled');
-    else warn('No LLM key locally — the deterministic syllabus parser still works',
-      'Set Llm.ApiKey in appsettings.Development.json to enable the AI fallback.');
+    if (llmKey) {
+      const looksAnthropic = llmKey.startsWith('sk-ant-');
+      if (looksAnthropic) pass('Claude API key present — AI syllabus fallback and advisor enabled');
+      else fail('Llm.ApiKey does not look like an Anthropic key',
+        'Claude keys start with sk-ant-. An OpenAI key (sk-...) will not work:',
+        'the backend uses the Anthropic SDK.');
+    } else {
+      warn('No Claude API key locally — the deterministic syllabus parser still works',
+        'Set Llm.ApiKey in appsettings.Development.json (sk-ant-...) to enable AI parsing.');
+    }
   } catch (error) {
     fail(`${devSettingsPath} is not valid JSON`, String(error.message));
   }
@@ -276,7 +283,7 @@ if (DEPLOY) {
     ['Railway', 'Variable Clerk__AuthorizedParties__0 = https://your-site-domain'],
     ['Railway', 'Variable Cors__AllowedOrigins__0 = https://your-site-domain'],
     ['Railway', 'MySQL plugin attached (supplies MYSQL_URL) or ConnectionStrings__DefaultConnection set'],
-    ['Railway', 'Optional: Llm__ApiKey for AI syllabus parsing and the grade advisor'],
+    ['Railway', 'Optional: Llm__ApiKey = your Anthropic key (sk-ant-...) for AI syllabus parsing and the advisor'],
     ['GitHub', 'Actions → Variables → VITE_API_BASE_URL = https://<app>.up.railway.app/api  (note the /api suffix)'],
     ['GitHub', 'Actions → Variables → VITE_CLERK_PUBLISHABLE_KEY = pk_live_...'],
     ['GitHub', 'Actions → Variables → VITE_BASE = "/" for a custom domain, "/<repo>/" for a project site'],

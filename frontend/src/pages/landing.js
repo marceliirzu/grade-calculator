@@ -559,7 +559,7 @@ export const LandingPage = {
   },
 
   async startAddClass() {
-    const syllabusData = await Modal.showSyllabusPaste({ aiAvailable: AuthService.isSignedIn() });
+    const syllabusData = await Modal.showSyllabusPaste({ canUseServer: AuthService.isSignedIn() });
     navigate('classSetup', { syllabusData, semesterId: this.currentSemesterId });
   },
 };
