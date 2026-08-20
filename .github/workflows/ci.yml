@@ -35,17 +35,24 @@ jobs:
         working-directory: backend
         run: dotnet test GradeCalculator.sln --configuration Release --no-build --verbosity normal
 
-      # Catches a model change that was made without a matching migration — otherwise the
-      # mismatch only surfaces at boot in production, where it takes the API down.
+      # Catches a model change made without a matching migration — otherwise the mismatch
+      # only surfaces at boot in production, where it takes the API down.
       - name: Verify migrations are up to date
         working-directory: backend/GradeCalculator.API
         run: |
           dotnet tool install --global dotnet-ef --version 8.* > /dev/null
           export PATH="$PATH:$HOME/.dotnet/tools"
-          dotnet ef migrations has-pending-model-changes && {
-            echo "::error::The EF model has changes with no migration. Run: dotnet ef migrations add <Name> --output-dir Data/Migrations"
+
+          # `has-pending-model-changes` exits 0 when the model already matches the latest
+          # migration, and non-zero when it does not. Treating a zero exit as "pending
+          # changes" is backwards and fails the build precisely when everything is correct.
+          if dotnet ef migrations has-pending-model-changes; then
+            echo "Model matches the latest migration."
+          else
+            echo "::error::The EF model has pending changes with no migration (or the check could not run)."
+            echo "Run: dotnet ef migrations add <Name> --output-dir Data/Migrations"
             exit 1
-          } || true
+          fi
 
   frontend:
     name: Frontend (Vite)
