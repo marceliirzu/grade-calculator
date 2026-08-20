@@ -15,6 +15,12 @@ import { SyllabusService } from '../services/dataServices.js';
 let container = null;
 let escapeListener = null;
 
+/** How long each status message is shown before the next one. */
+const PROGRESS_INTERVAL_MS = 6000;
+
+/** Cross-fade duration; must match the CSS transition on .ai-progress. */
+const PROGRESS_FADE_MS = 220;
+
 function ensureContainer() {
   if (!container) container = document.getElementById('modalContainer');
   return container;
@@ -66,6 +72,10 @@ export const Modal = {
 
   hide() {
     const host = ensureContainer();
+
+    // Always stop the status rotation: the dialog can be dismissed mid-request, and a timer
+    // left running would tick against detached nodes for the life of the page.
+    this._stopProgress();
 
     host.style.display = 'none';
     host.innerHTML = '';
@@ -330,6 +340,74 @@ C: 70-79%"></textarea>
     preview.innerHTML = `<div class="parse-preview"><div class="parse-preview-title">Detected Info</div>${rows.join('')}</div>`;
   },
 
+  /**
+   * Status messages shown while the server works, advanced every
+   * {@link PROGRESS_INTERVAL_MS}.
+   *
+   * A spinner that never changes reads as a hung page, and people abandon it. Rotating status
+   * keeps a slow request feeling alive and measurably improves how long users wait.
+   *
+   * Every line here is true of what the server is actually doing, in the order it does it. That
+   * is not squeamishness — it is what makes the technique work. By the time the first rotation
+   * fires the deterministic pass and the cache have both missed, so the request really is with
+   * the AI. Invented progress ("Analysing 12 categories...") would read the same for six
+   * seconds and then be contradicted by whatever came back.
+   *
+   * The last line sets an expectation rather than claiming to be nearly done. A user told "up
+   * to a minute" waits; a user told "almost there" three times stops believing the app.
+   */
+  _progressMessages: [
+    'Reading your syllabus...',
+    'This one needs a closer look — asking AI...',
+    'Working through the grading section...',
+    'Complex syllabi take a little longer...',
+    'Still going — this can take up to a minute...',
+  ],
+
+  _progressTimer: null,
+
+  /**
+   * Advances the status message on a timer.
+   *
+   * The interval is stored on the module so {@link hide} can always clear it. A timer left
+   * running after the dialog closes would fire against detached nodes forever.
+   */
+  _startProgress() {
+    this._stopProgress();
+
+    let index = 0;
+
+    this._progressTimer = setInterval(() => {
+      // Hold on the final line rather than looping. Cycling back to "Reading your syllabus"
+      // after thirty seconds would suggest the work restarted.
+      if (index >= this._progressMessages.length - 1) return;
+
+      index += 1;
+
+      const element = document.getElementById('syllabusProgress');
+      if (!element) {
+        // The dialog closed without going through hide(); stop rather than leak.
+        this._stopProgress();
+        return;
+      }
+
+      // Fade out, swap, fade in — an instant text change is jarring enough to look like a bug.
+      element.classList.add('is-fading');
+
+      setTimeout(() => {
+        element.textContent = this._progressMessages[index];
+        element.classList.remove('is-fading');
+      }, PROGRESS_FADE_MS);
+    }, PROGRESS_INTERVAL_MS);
+  },
+
+  _stopProgress() {
+    if (this._progressTimer === null) return;
+
+    clearInterval(this._progressTimer);
+    this._progressTimer = null;
+  },
+
   _renderServerAttempt() {
     const body = document.getElementById('syllabusModalBody');
 
@@ -337,9 +415,11 @@ C: 70-79%"></textarea>
       body.innerHTML = `
         <div class="ai-processing">
           <div class="loading-spinner"></div>
-          <p style="margin-top: var(--spacing-4);">Reading your syllabus...</p>
+          <p class="ai-progress" id="syllabusProgress" role="status" aria-live="polite">
+            ${escapeHtml(this._progressMessages[0])}
+          </p>
           <p style="color: var(--color-text-muted); font-size: var(--font-size-xs); margin-top: var(--spacing-2);">
-            This one needs a closer look — just a moment
+            You can keep this open — we will fill everything in for you
           </p>
         </div>
       `;
@@ -347,6 +427,8 @@ C: 70-79%"></textarea>
 
     const footer = ensureContainer().querySelector('.modal-footer');
     if (footer) footer.style.display = 'none';
+
+    this._startProgress();
   },
 
   _renderFailure(error, settle) {

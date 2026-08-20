@@ -220,3 +220,21 @@
 @media (prefers-reduced-motion: reduce) {
     .modal-toast { animation: none; }
 }
+
+/* Rotating status while the server parses a syllabus. The fade exists because an instant
+   text swap under a spinner reads as a glitch rather than progress. */
+.ai-progress {
+    margin-top: var(--spacing-4);
+    transition: opacity 220ms ease;
+    opacity: 1;
+}
+
+.ai-progress.is-fading {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-progress {
+        transition: none;
+    }
+}
