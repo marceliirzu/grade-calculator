@@ -16,6 +16,7 @@ import './styles/pages/semester.css';
 import './styles/chunky-theme.css';
 import './styles/app.css';
 
+import { escapeHtml } from './core/formatters.js';
 import { AuthService } from './services/auth.js';
 import { SemesterService } from './services/dataServices.js';
 import { Modal } from './components/modal.js';
@@ -46,7 +47,7 @@ const App = {
       semesterHistory: SemesterHistoryPage,
     });
 
-    setNavigationHandler(() => this.updateChrome());
+    setNavigationHandler((page) => this.updateChrome(page));
 
     // Clerk must finish loading before the first render, otherwise a returning user would see
     // the marketing page flash before their session resolves.
@@ -60,6 +61,26 @@ const App = {
     navigate(AuthService.isAuthenticated() ? 'semesterList' : 'landing');
 
     document.body.classList.add('loaded');
+  },
+
+  /**
+   * Per-navigation chrome. Called by the router after every view change.
+   *
+   * Only the parts that actually vary by route live here. The header itself is not re-rendered,
+   * because that would re-mount Clerk's user button on every navigation — a visible flicker and
+   * needless work.
+   */
+  updateChrome(page) {
+    const header = document.querySelector('.header');
+
+    if (header) {
+      // The marketing hero supplies its own nav, so the app header is hidden there and shown
+      // everywhere else.
+      const hideHeader = page === 'landing' && !AuthService.isAuthenticated();
+      header.classList.toggle('hidden', hideHeader);
+    }
+
+    this.renderGuestBanner();
   },
 
   onAuthChanged() {
@@ -147,13 +168,28 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Failed to start the app:', error);
 
     // A blank page with a console error is not an acceptable failure mode for users.
+    // The original message hid the cause, which made a production failure undiagnosable
+    // without devtools. The detail is shown inline instead: nothing here is sensitive
+    // (config in this bundle is public by design), and a user who can read the reason can
+    // report it, or see for themselves that it is e.g. an offline network.
+    const detail = error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : String(error);
+
     document.getElementById('mainContent').innerHTML = `
       <div class="empty-state">
         <h3 class="empty-state-title">Something went wrong starting the app</h3>
         <p class="empty-state-text">Please refresh the page. If it keeps happening, clear your browser storage for this site.</p>
+        <pre class="startup-error">${escapeHtml(detail)}</pre>
       </div>
     `;
 
     document.body.classList.add('loaded');
   });
+});
+
+// Async failures that are not awaited by init() (the advisor widget, a background quota
+// fetch) surface here rather than vanishing into an unhandled rejection the user never sees.
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
 });

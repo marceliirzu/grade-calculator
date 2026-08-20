@@ -28,6 +28,7 @@ export default [
         IntersectionObserver: 'readonly',
         URLSearchParams: 'readonly',
         URL: 'readonly',
+        Event: 'readonly',
         Element: 'readonly',
         globalThis: 'readonly',
       },

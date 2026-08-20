@@ -197,8 +197,14 @@ export const LandingPage = {
     const elements = document.querySelectorAll('.lp .reveal');
     if (elements.length === 0) return;
 
-    // Respect a reduced-motion preference by revealing everything immediately.
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    // Reveal everything immediately when scroll-triggered animation is unavailable or
+    // unwanted: a reduced-motion preference, or an environment with no IntersectionObserver.
+    // Without the second check the content would stay permanently invisible, which is a far
+    // worse failure than simply skipping the animation.
+    const canObserve = typeof IntersectionObserver !== 'undefined';
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    if (!canObserve || prefersReducedMotion) {
       elements.forEach((element) => element.classList.add('in'));
       return;
     }
